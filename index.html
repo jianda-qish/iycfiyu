@@ -3,338 +3,368 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>经典扫雷</title>
+    <title>坦克大战</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            background-color: #222;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        h1 {
-            color: #333;
-        }
-        .game-container {
-            background-color: #c0c0c0;
-            padding: 10px;
-            border: 4px solid #fff;
-            border-right-color: #7b7b7b;
-            border-bottom-color: #7b7b7b;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            background-color: #c0c0c0;
-            padding: 5px;
-            margin-bottom: 10px;
-            border: 2px solid #7b7b7b;
-            border-right-color: #fff;
-            border-bottom-color: #fff;
+            height: 100vh;
+            color: #fff;
+            font-family: sans-serif;
+            overflow: hidden;
         }
-        .display {
-            background-color: #000;
-            color: #ff0000;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 24px;
-            font-weight: bold;
-            padding: 2px 5px;
-            border: 1px solid #7b7b7b;
+        canvas {
+            background-color: #111;
+            border: 4px solid #555;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
-        #reset {
-            width: 36px;
-            height: 36px;
-            font-size: 20px;
-            background-color: #c0c0c0;
-            border: 2px solid #fff;
-            border-right-color: #7b7b7b;
-            border-bottom-color: #7b7b7b;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        #ui {
+            margin-top: 10px;
+            font-size: 18px;
         }
-        #reset:active {
-            border: 2px solid #7b7b7b;
-            border-right-color: #fff;
-            border-bottom-color: #fff;
-        }
-        #board {
-            display: grid;
-            grid-template-columns: repeat(9, 30px);
-            grid-template-rows: repeat(9, 30px);
-            gap: 1px;
-            background-color: #7b7b7b;
-            border: 2px solid #7b7b7b;
-        }
-        .cell {
-            width: 30px;
-            height: 30px;
-            background-color: #c0c0c0;
-            border: 2px solid #fff;
-            border-right-color: #7b7b7b;
-            border-bottom-color: #7b7b7b;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            user-select: none;
-        }
-        .cell.revealed {
-            border: 1px solid #7b7b7b;
-            background-color: #c0c0c0;
-            cursor: default;
-        }
-        .cell.mine {
-            background-color: red;
-        }
-        /* 数字颜色 */
-        .cell[data-num="1"] { color: blue; }
-        .cell[data-num="2"] { color: green; }
-        .cell[data-num="3"] { color: red; }
-        .cell[data-num="4"] { color: darkblue; }
-        .cell[data-num="5"] { color: brown; }
-        .cell[data-num="6"] { color: teal; }
-        .cell[data-num="7"] { color: black; }
-        .cell[data-num="8"] { color: gray; }
     </style>
 </head>
 <body>
 
-    <h1>💣 扫雷 💣</h1>
-    <div class="game-container">
-        <div class="header">
-            <div id="mine-count" class="display">010</div>
-            <button id="reset">🙂</button>
-            <div id="timer" class="display">000</div>
-        </div>
-        <div id="board"></div>
-    </div>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <div id="ui">WASD 或 方向键移动 | 空格键开火</div>
 
     <script>
-        const ROWS = 9;
-        const COLS = 9;
-        const MINES = 10;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-        let board = [];
+        // 游戏配置
+        const TILE_SIZE = 30;
+        const COLS = 20;
+        const ROWS = 20;
+        const TANK_SPEED = 2;
+        const BULLET_SPEED = 6;
+
+        // 方向枚举
+        const DIRS = {
+            UP: 0,
+            RIGHT: 1,
+            DOWN: 2,
+            LEFT: 3
+        };
+
+        // 键盘状态
+        const keys = {
+            w: false, a: false, s: false, d: false,
+            ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false,
+            ' ': false
+        };
+
+        window.addEventListener('keydown', e => {
+            if (keys.hasOwnProperty(e.key)) {
+                keys[e.key] = true;
+                e.preventDefault(); // 防止方向键滚动页面
+            }
+        });
+        window.addEventListener('keyup', e => {
+            if (keys.hasOwnProperty(e.key)) {
+                keys[e.key] = false;
+                e.preventDefault();
+            }
+        });
+
+        // 矩形碰撞检测
+        function rectIntersect(r1, r2) {
+            return !(r2.x > r1.x + r1.w || r2.x + r2.w < r1.x || r2.y > r1.y + r1.h || r2.y + r2.h < r1.y);
+        }
+
+        class Tank {
+            constructor(x, y, color, isPlayer = false) {
+                this.x = x;
+                this.y = y;
+                this.w = TILE_SIZE - 2;
+                this.h = TILE_SIZE - 2;
+                this.color = color;
+                this.dir = isPlayer ? DIRS.UP : DIRS.DOWN;
+                this.isPlayer = isPlayer;
+                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.6;
+                this.cooldown = 0;
+                this.aiTimer = 0;
+                this.hp = 1;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+
+                // 画炮管
+                ctx.fillStyle = '#ddd';
+                const barrelLen = 10;
+                const barrelWidth = 6;
+                let bx = this.x + this.w / 2 - barrelWidth / 2;
+                let by = this.y + this.h / 2 - barrelWidth / 2;
+
+                if (this.dir === DIRS.UP) ctx.fillRect(bx, by - barrelLen, barrelWidth, barrelLen);
+                if (this.dir === DIRS.DOWN) ctx.fillRect(bx, by, barrelWidth, barrelLen);
+                if (this.dir === DIRS.LEFT) ctx.fillRect(bx - barrelLen, by, barrelLen, barrelWidth);
+                if (this.dir === DIRS.RIGHT) ctx.fillRect(bx, by, barrelLen, barrelWidth);
+            }
+
+            update() {
+                if (this.cooldown > 0) this.cooldown--;
+
+                let dx = 0, dy = 0;
+                let moving = false;
+
+                if (this.isPlayer) {
+                    if (keys.w || keys.ArrowUp) { this.dir = DIRS.UP; dy = -this.speed; moving = true; }
+                    else if (keys.s || keys.ArrowDown) { this.dir = DIRS.DOWN; dy = this.speed; moving = true; }
+                    else if (keys.a || keys.ArrowLeft) { this.dir = DIRS.LEFT; dx = -this.speed; moving = true; }
+                    else if (keys.d || keys.ArrowRight) { this.dir = DIRS.RIGHT; dx = this.speed; moving = true; }
+
+                    if (keys[' '] && this.cooldown === 0) {
+                        this.shoot();
+                    }
+                } else {
+                    // 简单的AI逻辑
+                    this.aiTimer--;
+                    if (this.aiTimer <= 0) {
+                        this.dir = Math.floor(Math.random() * 4);
+                        this.aiTimer = 30 + Math.random() * 60;
+                        if (Math.random() > 0.5) this.shoot();
+                    }
+                    if (this.dir === DIRS.UP) dy = -this.speed;
+                    if (this.dir === DIRS.DOWN) dy = this.speed;
+                    if (this.dir === DIRS.LEFT) dx = -this.speed;
+                    if (this.dir === DIRS.RIGHT) dx = this.speed;
+                    moving = true;
+                }
+
+                // 移动与碰撞
+                if (moving) {
+                    let nextX = this.x + dx;
+                    let nextY = this.y + dy;
+
+                    // 边界限制
+                    if (nextX < 0) nextX = 0;
+                    if (nextX + this.w > canvas.width) nextX = canvas.width - this.w;
+                    if (nextY < 0) nextY = 0;
+                    if (nextY + this.h > canvas.height) nextY = canvas.height - this.h;
+
+                    // 与墙体碰撞
+                    let collided = false;
+                    for (let wall of walls) {
+                        if (rectIntersect({x: nextX, y: nextY, w: this.w, h: this.h}, wall)) {
+                            collided = true;
+                            break;
+                        }
+                    }
+
+                    // 与基地碰撞
+                    if (rectIntersect({x: nextX, y: nextY, w: this.w, h: this.h}, base)) {
+                        collided = true;
+                    }
+
+                    if (!collided) {
+                        this.x = nextX;
+                        this.y = nextY;
+                    } else if (!this.isPlayer) {
+                        // AI碰到墙就换方向
+                        this.dir = Math.floor(Math.random() * 4);
+                        this.aiTimer = 30;
+                    }
+                }
+            }
+
+            shoot() {
+                this.cooldown = this.isPlayer ? 20 : 60; // 射击间隔
+                let bx = this.x + this.w / 2 - 3;
+                let by = this.y + this.h / 2 - 3;
+                bullets.push(new Bullet(bx, by, this.dir, this.isPlayer));
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, dir, isPlayer) {
+                this.x = x;
+                this.y = y;
+                this.w = 6;
+                this.h = 6;
+                this.dir = dir;
+                this.isPlayer = isPlayer;
+                this.dead = false;
+            }
+
+            update() {
+                if (this.dir === DIRS.UP) this.y -= BULLET_SPEED;
+                if (this.dir === DIRS.DOWN) this.y += BULLET_SPEED;
+                if (this.dir === DIRS.LEFT) this.x -= BULLET_SPEED;
+                if (this.dir === DIRS.RIGHT) this.x += BULLET_SPEED;
+
+                // 边界消失
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.dead = true;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.isPlayer ? '#fff' : '#ffaa00';
+                ctx.beginPath();
+                ctx.arc(this.x + 3, this.y + 3, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 游戏状态
+        let player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, '#4CAF50', true);
+        let enemies = [
+            new Tank(1 * TILE_SIZE, 1 * TILE_SIZE, '#F44336', false),
+            new Tank(17 * TILE_SIZE, 1 * TILE_SIZE, '#F44336', false)
+        ];
+        let bullets = [];
+        let walls = [];
+        let base = { x: 9 * TILE_SIZE, y: 19 * TILE_SIZE, w: TILE_SIZE * 2, h: TILE_SIZE };
         let gameOver = false;
-        let flags = 0;
-        let revealedCount = 0;
-        let timerInterval = null;
-        let time = 0;
+        let win = false;
 
-        const boardEl = document.getElementById('board');
-        const mineCountEl = document.getElementById('mine-count');
-        const timerEl = document.getElementById('timer');
-        const resetBtn = document.getElementById('reset');
+        // 生成地图
+        function generateMap() {
+            walls = [];
+            // 随机生成一些砖块和钢块
+            for (let i = 0; i < 60; i++) {
+                let x = Math.floor(Math.random() * COLS) * TILE_SIZE;
+                let y = Math.floor(Math.random() * ROWS) * TILE_SIZE;
+                
+                // 避开玩家和敌人出生点
+                if (y > 15 * TILE_SIZE) continue;
+                if (x < 3 * TILE_SIZE && y < 3 * TILE_SIZE) continue;
+                if (x > 16 * TILE_SIZE && y < 3 * TILE_SIZE) continue;
 
-        // 初始化游戏
-        function initGame() {
-            board = [];
-            gameOver = false;
-            flags = 0;
-            revealedCount = 0;
-            time = 0;
-            clearInterval(timerInterval);
-            timerEl.textContent = '000';
-            resetBtn.textContent = '🙂';
-            updateMineCount();
-            boardEl.innerHTML = '';
+                let type = Math.random() > 0.3 ? 'brick' : 'steel';
+                walls.push({ x, y, w: TILE_SIZE, h: TILE_SIZE, type });
+            }
+            // 基地周围的保护墙
+            walls.push({ x: 8 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
+            walls.push({ x: 11 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
+        }
 
-            // 生成空数据
-            for (let r = 0; r < ROWS; r++) {
-                const row = [];
-                for (let c = 0; c < COLS; c++) {
-                    row.push({
-                        isMine: false,
-                        isRevealed: false,
-                        isFlagged: false,
-                        neighborMines: 0,
-                        element: null
-                    });
+        generateMap();
+
+        // 绘制循环
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 画基地
+            ctx.fillStyle = '#FFD700'; // 金色老鹰
+            ctx.fillRect(base.x, base.y, base.w, base.h);
+            ctx.fillStyle = '#000';
+            ctx.font = '16px Arial';
+            ctx.fillText('🦅', base.x + 18, base.y + 22);
+
+            // 画墙
+            for (let wall of walls) {
+                if (wall.type === 'brick') {
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+                    // 砖块纹理
+                    ctx.strokeStyle = '#5c2e0a';
+                    ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
+                } else {
+                    ctx.fillStyle = '#888';
+                    ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+                    ctx.strokeStyle = '#555';
+                    ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
                 }
-                board.push(row);
             }
 
-            // 随机布雷
-            let minesPlanted = 0;
-            while (minesPlanted < MINES) {
-                const r = Math.floor(Math.random() * ROWS);
-                const c = Math.floor(Math.random() * COLS);
-                if (!board[r][c].isMine) {
-                    board[r][c].isMine = true;
-                    minesPlanted++;
-                }
-            }
+            // 画坦克
+            if (player.hp > 0) player.draw();
+            for (let enemy of enemies) enemy.draw();
 
-            // 计算周围地雷数量并渲染DOM
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (!board[r][c].isMine) {
-                        board[r][c].neighborMines = countNeighborMines(r, c);
-                    }
-                    const cell = document.createElement('div');
-                    cell.classList.add('cell');
-                    cell.dataset.r = r;
-                    cell.dataset.c = c;
-                    cell.addEventListener('click', handleLeftClick);
-                    cell.addEventListener('contextmenu', handleRightClick);
-                    boardEl.appendChild(cell);
-                    board[r][c].element = cell;
-                }
+            // 画子弹
+            for (let bullet of bullets) bullet.draw();
+
+            // UI
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '40px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(win ? '胜利！' : '游戏结束', canvas.width / 2, canvas.height / 2);
+                ctx.font = '20px Arial';
+                ctx.fillText('刷新页面重新开始', canvas.width / 2, canvas.height / 2 + 40);
             }
         }
 
-        // 计算周边地雷
-        function countNeighborMines(row, col) {
-            let count = 0;
-            for (let r = -1; r <= 1; r++) {
-                for (let c = -1; c <= 1; c++) {
-                    if (r === 0 && c === 0) continue;
-                    const newRow = row + r;
-                    const newCol = col + c;
-                    if (newRow >= 0 && newRow < ROWS && newCol >= 0 && newCol < COLS) {
-                        if (board[newRow][newCol].isMine) {
-                            count++;
+        // 更新逻辑
+        function update() {
+            if (gameOver) return;
+
+            if (player.hp > 0) player.update();
+            for (let enemy of enemies) enemy.update();
+
+            // 子弹更新
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let bullet = bullets[i];
+                bullet.update();
+
+                // 子弹与墙碰撞
+                for (let j = walls.length - 1; j >= 0; j--) {
+                    let wall = walls[j];
+                    if (rectIntersect(bullet, wall)) {
+                        bullet.dead = true;
+                        if (wall.type === 'brick') {
+                            walls.splice(j, 1); // 砖块被摧毁
+                        }
+                        break;
+                    }
+                }
+
+                // 子弹与基地碰撞
+                if (rectIntersect(bullet, base)) {
+                    bullet.dead = true;
+                    gameOver = true;
+                    win = false;
+                }
+
+                // 子弹与坦克碰撞
+                if (bullet.isPlayer) {
+                    for (let enemy of enemies) {
+                        if (enemy.hp > 0 && rectIntersect(bullet, enemy)) {
+                            bullet.dead = true;
+                            enemy.hp = 0;
+                            break;
                         }
                     }
+                } else {
+                    if (player.hp > 0 && rectIntersect(bullet, player)) {
+                        bullet.dead = true;
+                        player.hp = 0;
+                        gameOver = true;
+                    }
                 }
+
+                if (bullet.dead) bullets.splice(i, 1);
             }
-            return count;
-        }
 
-        // 左键点击
-        function handleLeftClick(e) {
-            if (gameOver) return;
-            const r = parseInt(e.target.dataset.r);
-            const c = parseInt(e.target.dataset.c);
-            const cellData = board[r][c];
-
-            if (cellData.isFlagged || cellData.isRevealed) return;
-
-            if (!timerInterval) startTimer();
-
-            if (cellData.isMine) {
-                // 踩雷
+            // 检查胜利条件
+            if (enemies.every(e => e.hp === 0)) {
                 gameOver = true;
-                e.target.classList.add('mine');
-                e.target.textContent = '💣';
-                revealAllMines();
-                resetBtn.textContent = '😵';
-                clearInterval(timerInterval);
-            } else {
-                // 安全
-                revealCell(r, c);
-                checkWin();
+                win = true;
             }
         }
 
-        // 右键点击（插旗）
-        function handleRightClick(e) {
-            e.preventDefault();
-            if (gameOver) return;
-            const r = parseInt(e.target.dataset.r);
-            const c = parseInt(e.target.dataset.c);
-            const cellData = board[r][c];
-
-            if (cellData.isRevealed) return;
-
-            if (!cellData.isFlagged) {
-                if (flags < MINES) {
-                    cellData.isFlagged = true;
-                    e.target.textContent = '🚩';
-                    flags++;
-                }
-            } else {
-                cellData.isFlagged = false;
-                e.target.textContent = '';
-                flags--;
-            }
-            updateMineCount();
+        // 主游戏循环
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
         }
 
-        // 展开格子（递归处理空白区域）
-        function revealCell(row, col) {
-            if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
-            const cellData = board[row][col];
-            
-            if (cellData.isRevealed || cellData.isFlagged || cellData.isMine) return;
+        // 启动游戏
+        gameLoop();
 
-            cellData.isRevealed = true;
-            revealedCount++;
-            const el = cellData.element;
-            el.classList.add('revealed');
-            
-            if (cellData.neighborMines > 0) {
-                el.textContent = cellData.neighborMines;
-                el.dataset.num = cellData.neighborMines;
-            } else {
-                // 如果周围没雷，递归展开周围格子
-                for (let r = -1; r <= 1; r++) {
-                    for (let c = -1; c <= 1; c++) {
-                        revealCell(row + r, col + c);
-                    }
-                }
-            }
-        }
-
-        // 游戏结束时显示所有地雷
-        function revealAllMines() {
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (board[r][c].isMine && !board[r][c].isFlagged) {
-                        board[r][c].element.classList.add('revealed');
-                        board[r][c].element.textContent = '💣';
-                    }
-                }
-            }
-        }
-
-        // 检查是否胜利
-        function checkWin() {
-            if (revealedCount === ROWS * COLS - MINES) {
-                gameOver = true;
-                resetBtn.textContent = '😎';
-                clearInterval(timerInterval);
-                // 把剩余的地雷自动插上旗子
-                for (let r = 0; r < ROWS; r++) {
-                    for (let c = 0; c < COLS; c++) {
-                        if (board[r][c].isMine && !board[r][c].isFlagged) {
-                            board[r][c].element.textContent = '🚩';
-                        }
-                    }
-                }
-                updateMineCount(0);
-            }
-        }
-
-        // 更新雷数显示
-        function updateMineCount(override) {
-            const remaining = override !== undefined ? override : MINES - flags;
-            mineCountEl.textContent = remaining.toString().padStart(3, '0');
-        }
-
-        // 计时器
-        function startTimer() {
-            timerInterval = setInterval(() => {
-                time++;
-                if (time > 999) time = 999;
-                timerEl.textContent = time.toString().padStart(3, '0');
-            }, 1000);
-        }
-
-        // 重新开始按钮
-        resetBtn.addEventListener('click', initGame);
-
-        // 开始游戏
-        initGame();
     </script>
 </body>
 </html>
