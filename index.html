@@ -26,17 +26,23 @@
         #ui {
             margin-top: 10px;
             font-size: 18px;
+            display: flex;
+            gap: 20px;
         }
     </style>
 </head>
 <body>
 
     <canvas id="gameCanvas" width="600" height="600"></canvas>
-    <div id="ui">WASD 或 方向键移动 | 空格键开火</div>
+    <div id="ui">
+        <span>WASD 或 方向键移动 | 空格键开火</span>
+        <span id="scoreDisplay">得分: 0</span>
+    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('scoreDisplay');
 
         // 游戏配置
         const TILE_SIZE = 30;
@@ -46,12 +52,7 @@
         const BULLET_SPEED = 6;
 
         // 方向枚举
-        const DIRS = {
-            UP: 0,
-            RIGHT: 1,
-            DOWN: 2,
-            LEFT: 3
-        };
+        const DIRS = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
 
         // 键盘状态
         const keys = {
@@ -63,7 +64,7 @@
         window.addEventListener('keydown', e => {
             if (keys.hasOwnProperty(e.key)) {
                 keys[e.key] = true;
-                e.preventDefault(); // 防止方向键滚动页面
+                e.preventDefault(); 
             }
         });
         window.addEventListener('keyup', e => {
@@ -94,6 +95,21 @@
             }
 
             draw() {
+                // 如果已经死亡，画成灰色残骸（或者你可以直接 return 让它消失）
+                if (this.hp <= 0) {
+                    ctx.fillStyle = '#444';
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                    // 画个叉
+                    ctx.strokeStyle = '#222';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + this.w, this.y + this.h);
+                    ctx.moveTo(this.x + this.w, this.y);
+                    ctx.lineTo(this.x, this.y + this.h);
+                    ctx.stroke();
+                    return; 
+                }
+
                 ctx.fillStyle = this.color;
                 ctx.fillRect(this.x, this.y, this.w, this.h);
 
@@ -111,6 +127,8 @@
             }
 
             update() {
+                if (this.hp <= 0) return; // 死亡后不再更新逻辑
+
                 if (this.cooldown > 0) this.cooldown--;
 
                 let dx = 0, dy = 0;
@@ -140,18 +158,15 @@
                     moving = true;
                 }
 
-                // 移动与碰撞
                 if (moving) {
                     let nextX = this.x + dx;
                     let nextY = this.y + dy;
 
-                    // 边界限制
                     if (nextX < 0) nextX = 0;
                     if (nextX + this.w > canvas.width) nextX = canvas.width - this.w;
                     if (nextY < 0) nextY = 0;
                     if (nextY + this.h > canvas.height) nextY = canvas.height - this.h;
 
-                    // 与墙体碰撞
                     let collided = false;
                     for (let wall of walls) {
                         if (rectIntersect({x: nextX, y: nextY, w: this.w, h: this.h}, wall)) {
@@ -160,7 +175,6 @@
                         }
                     }
 
-                    // 与基地碰撞
                     if (rectIntersect({x: nextX, y: nextY, w: this.w, h: this.h}, base)) {
                         collided = true;
                     }
@@ -169,7 +183,6 @@
                         this.x = nextX;
                         this.y = nextY;
                     } else if (!this.isPlayer) {
-                        // AI碰到墙就换方向
                         this.dir = Math.floor(Math.random() * 4);
                         this.aiTimer = 30;
                     }
@@ -177,7 +190,7 @@
             }
 
             shoot() {
-                this.cooldown = this.isPlayer ? 20 : 60; // 射击间隔
+                this.cooldown = this.isPlayer ? 20 : 60; 
                 let bx = this.x + this.w / 2 - 3;
                 let by = this.y + this.h / 2 - 3;
                 bullets.push(new Bullet(bx, by, this.dir, this.isPlayer));
@@ -201,7 +214,6 @@
                 if (this.dir === DIRS.LEFT) this.x -= BULLET_SPEED;
                 if (this.dir === DIRS.RIGHT) this.x += BULLET_SPEED;
 
-                // 边界消失
                 if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
                     this.dead = true;
                 }
@@ -226,16 +238,14 @@
         let base = { x: 9 * TILE_SIZE, y: 19 * TILE_SIZE, w: TILE_SIZE * 2, h: TILE_SIZE };
         let gameOver = false;
         let win = false;
+        let score = 0;
 
-        // 生成地图
         function generateMap() {
             walls = [];
-            // 随机生成一些砖块和钢块
             for (let i = 0; i < 60; i++) {
                 let x = Math.floor(Math.random() * COLS) * TILE_SIZE;
                 let y = Math.floor(Math.random() * ROWS) * TILE_SIZE;
                 
-                // 避开玩家和敌人出生点
                 if (y > 15 * TILE_SIZE) continue;
                 if (x < 3 * TILE_SIZE && y < 3 * TILE_SIZE) continue;
                 if (x > 16 * TILE_SIZE && y < 3 * TILE_SIZE) continue;
@@ -243,19 +253,17 @@
                 let type = Math.random() > 0.3 ? 'brick' : 'steel';
                 walls.push({ x, y, w: TILE_SIZE, h: TILE_SIZE, type });
             }
-            // 基地周围的保护墙
             walls.push({ x: 8 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
             walls.push({ x: 11 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
         }
 
         generateMap();
 
-        // 绘制循环
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // 画基地
-            ctx.fillStyle = '#FFD700'; // 金色老鹰
+            ctx.fillStyle = '#FFD700'; 
             ctx.fillRect(base.x, base.y, base.w, base.h);
             ctx.fillStyle = '#000';
             ctx.font = '16px Arial';
@@ -266,7 +274,6 @@
                 if (wall.type === 'brick') {
                     ctx.fillStyle = '#8B4513';
                     ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-                    // 砖块纹理
                     ctx.strokeStyle = '#5c2e0a';
                     ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
                 } else {
@@ -279,7 +286,7 @@
 
             // 画坦克
             if (player.hp > 0) player.draw();
-            for (let enemy of enemies) enemy.draw();
+            for (let enemy of enemies) enemy.draw(); // draw 方法内部已处理死亡残骸
 
             // 画子弹
             for (let bullet of bullets) bullet.draw();
@@ -288,21 +295,21 @@
             if (gameOver) {
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = win ? '#4CAF50' : '#F44336';
                 ctx.font = '40px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText(win ? '胜利！' : '游戏结束', canvas.width / 2, canvas.height / 2);
+                ctx.fillStyle = '#fff';
                 ctx.font = '20px Arial';
                 ctx.fillText('刷新页面重新开始', canvas.width / 2, canvas.height / 2 + 40);
             }
         }
 
-        // 更新逻辑
         function update() {
             if (gameOver) return;
 
             if (player.hp > 0) player.update();
-            for (let enemy of enemies) enemy.update();
+            for (let enemy of enemies) enemy.update(); // update 方法内部已拦截死亡逻辑
 
             // 子弹更新
             for (let i = bullets.length - 1; i >= 0; i--) {
@@ -315,7 +322,7 @@
                     if (rectIntersect(bullet, wall)) {
                         bullet.dead = true;
                         if (wall.type === 'brick') {
-                            walls.splice(j, 1); // 砖块被摧毁
+                            walls.splice(j, 1);
                         }
                         break;
                     }
@@ -331,9 +338,12 @@
                 // 子弹与坦克碰撞
                 if (bullet.isPlayer) {
                     for (let enemy of enemies) {
+                        // 关键修复：判断 hp > 0，防止鞭尸
                         if (enemy.hp > 0 && rectIntersect(bullet, enemy)) {
                             bullet.dead = true;
                             enemy.hp = 0;
+                            score += 100;
+                            scoreEl.textContent = `得分: ${score}`;
                             break;
                         }
                     }
@@ -355,16 +365,13 @@
             }
         }
 
-        // 主游戏循环
         function gameLoop() {
             update();
             draw();
             requestAnimationFrame(gameLoop);
         }
 
-        // 启动游戏
         gameLoop();
-
     </script>
 </body>
 </html>
