@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+       <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>坦克大战 - 养生版</title>
+    <title>坦克大战 - 慢动作版</title>
     <style>
         body {
             margin: 0;
@@ -18,10 +18,14 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
         }
+        .game-wrapper {
+            position: relative;
+        }
         canvas {
             background-color: #000;
             border: 4px solid #555;
             box-shadow: 0 0 25px rgba(0,150,255,0.3);
+            display: block;
         }
         #ui {
             margin-top: 15px;
@@ -36,7 +40,6 @@
         }
         .highlight { color: #4CAF50; font-weight: bold; }
         
-        /* 重新开始按钮样式 */
         #restartBtn {
             background-color: #4CAF50;
             color: white;
@@ -48,17 +51,57 @@
             transition: background 0.2s;
             font-weight: bold;
         }
-        #restartBtn:hover {
-            background-color: #45a049;
+        #restartBtn:hover { background-color: #45a049; }
+        #restartBtn:active { background-color: #3d8b40; }
+
+        /* 游戏结束/胜利 悬浮层 */
+        #gameOverlay {
+            position: absolute;
+            top: 4px; left: 4px; right: 4px; bottom: 4px; /* 适应边框 */
+            background-color: rgba(0, 0, 0, 0.85);
+            display: none; /* 默认隐藏 */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
         }
-        #restartBtn:active {
-            background-color: #3d8b40;
+        #gameOverlay h2 {
+            font-size: 50px;
+            margin: 0 0 10px 0;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         }
+        #gameOverlay p {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        #overlayRestartBtn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 22px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background 0.2s;
+        }
+        #overlayRestartBtn:hover { background-color: #1976D2; }
+        #overlayRestartBtn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <div class="game-wrapper">
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <!-- 游戏结束悬浮层 -->
+        <div id="gameOverlay">
+            <h2 id="overlayTitle">游戏结束</h2>
+            <p id="overlayScore">最终得分: 0</p>
+            <button id="overlayRestartBtn">重新开始</button>
+        </div>
+    </div>
+
     <div id="ui">
         <span>WASD / 方向键 移动 | 空格键 开火</span>
         <span id="scoreDisplay">得分: <span class="highlight">0</span></span>
@@ -71,19 +114,24 @@
         const ctx = canvas.getContext('2d');
         const scoreEl = document.querySelector('#scoreDisplay .highlight');
         const enemyEl = document.querySelector('#enemyDisplay .highlight');
-        const restartBtn = document.getElementById('restartBtn');
+        
+        // 按钮和悬浮层
+        const topRestartBtn = document.getElementById('restartBtn');
+        const overlayRestartBtn = document.getElementById('overlayRestartBtn');
+        const gameOverlay = document.getElementById('gameOverlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayScore = document.getElementById('overlayScore');
 
-        // 游戏配置
+        // ---- 核心速度配置 ----
         const TILE_SIZE = 30;
         const COLS = 20;
         const ROWS = 20;
-        const TANK_SPEED = 2;
-        const BULLET_SPEED = 6;
+        const TANK_SPEED = 1;     // 原为2，减半
+        const BULLET_SPEED = 3;   // 原为6，减半
+        const SHOOT_COOLDOWN = 12; // 0.2秒 (60帧 * 0.2 = 12帧)
 
-        // 方向枚举
         const DIRS = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
 
-        // 键盘状态
         const keys = {
             w: false, a: false, s: false, d: false,
             ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false,
@@ -103,12 +151,10 @@
             }
         });
 
-        // 矩形碰撞检测
         function rectIntersect(r1, r2) {
             return !(r2.x >= r1.x + r1.w || r2.x + r2.w <= r1.x || r2.y >= r1.y + r1.h || r2.y + r2.h <= r1.y);
         }
 
-        // ---- 预定义的3套地图 ----
         const MAPS = [
             [
                 "00000000000000000000", "00110000000000001100", "00110000000000001100", "00110000220000001100",
@@ -142,8 +188,8 @@
                 this.color = color;
                 this.dir = isPlayer ? DIRS.UP : DIRS.DOWN;
                 this.isPlayer = isPlayer;
-                // 再次降低敌人移动速度 (从0.45降到了0.3)
-                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.3;
+                // 速度调整：玩家等于基础速度，敌人等于基础速度的40% (比原版更慢)
+                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.4;
                 this.cooldown = 0;
                 this.aiTimer = 0;
                 this.hp = 1;
@@ -195,7 +241,6 @@
                         this.shoot();
                     }
                 } else {
-                    // 敌人 AI 发呆时间更长了
                     this.aiTimer--;
                     if (this.aiTimer <= 0) {
                         this.dir = Math.floor(Math.random() * 4);
@@ -240,7 +285,8 @@
             }
 
             shoot() {
-                this.cooldown = this.isPlayer ? 20 : 100; // 敌人开火间隔再次加长
+                // 射击间隔设置为 0.2s (12帧)
+                this.cooldown = SHOOT_COOLDOWN; 
                 let bx = this.x + this.w / 2 - 3;
                 let by = this.y + this.h / 2 - 3;
                 bullets.push(new Bullet(bx, by, this.dir, this.isPlayer));
@@ -256,8 +302,8 @@
                 this.dir = dir;
                 this.isPlayer = isPlayer;
                 this.dead = false;
-                // 继续降低敌人子弹速度 (从0.5降到了0.35)
-                this.speed = isPlayer ? BULLET_SPEED : BULLET_SPEED * 0.35; 
+                // 玩家炮弹使用减速后的基础速度，敌人炮弹再慢一点（乘0.6）
+                this.speed = isPlayer ? BULLET_SPEED : BULLET_SPEED * 0.6; 
             }
 
             update() {
@@ -272,7 +318,6 @@
             }
 
             draw() {
-                // 给敌人子弹换个颜色，因为飞得慢，明显一点
                 ctx.fillStyle = this.isPlayer ? '#00ffff' : '#ff4444';
                 ctx.beginPath();
                 ctx.arc(this.x + 3, this.y + 3, 3.5, 0, Math.PI * 2);
@@ -284,7 +329,6 @@
             }
         }
 
-        // 游戏状态
         let player;
         let enemies = [];
         let bullets = [];
@@ -294,8 +338,10 @@
         let win = false;
         let score = 0;
 
-        // 初始化游戏逻辑 (绑定到了按钮和页面加载)
         function initGame() {
+            // 隐藏结束悬浮层
+            gameOverlay.style.display = 'none';
+
             player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, '#4CAF50', true);
             enemies = [];
             bullets = [];
@@ -322,10 +368,8 @@
             walls.push({ x: 11 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
 
             const enemySpawns = [
-                {x: 0, y: 0}, 
-                {x: 9 * TILE_SIZE, y: 0}, 
-                {x: 18 * TILE_SIZE, y: 0},
-                {x: 18 * TILE_SIZE, y: 5 * TILE_SIZE}
+                {x: 0, y: 0}, {x: 9 * TILE_SIZE, y: 0}, 
+                {x: 18 * TILE_SIZE, y: 0}, {x: 18 * TILE_SIZE, y: 5 * TILE_SIZE}
             ];
             for (let spawn of enemySpawns) {
                 enemies.push(new Tank(spawn.x, spawn.y, '#F44336', false));
@@ -338,15 +382,24 @@
             enemyEl.textContent = alive;
         }
 
-        // 重新开始按钮点击事件
-        restartBtn.addEventListener('click', () => {
-            initGame();
-        });
+        function endGame(isWin) {
+            gameOver = true;
+            win = isWin;
+            
+            // 更新悬浮层内容并显示
+            overlayTitle.textContent = isWin ? '胜 利 !' : '游戏结束';
+            overlayTitle.style.color = isWin ? '#4CAF50' : '#F44336';
+            overlayScore.textContent = `最终得分: ${score}`;
+            gameOverlay.style.display = 'flex';
+        }
+
+        // 绑定两个重新开始按钮的事件
+        topRestartBtn.addEventListener('click', initGame);
+        overlayRestartBtn.addEventListener('click', initGame);
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 基地
             ctx.fillStyle = '#FFD700'; 
             ctx.fillRect(base.x, base.y, base.w, base.h);
             ctx.fillStyle = '#000';
@@ -354,7 +407,6 @@
             ctx.textAlign = 'center';
             ctx.fillText('🦅', base.x + TILE_SIZE, base.y + 22);
 
-            // 墙
             for (let wall of walls) {
                 if (wall.type === 'brick') {
                     ctx.fillStyle = '#8B4513';
@@ -371,27 +423,9 @@
                 }
             }
 
-            // 坦克
             if (player.hp > 0) player.draw();
             for (let enemy of enemies) enemy.draw();
-
-            // 子弹
             for (let bullet of bullets) bullet.draw();
-
-            // 结束UI
-            if (gameOver) {
-                ctx.fillStyle = 'rgba(0,0,0,0.8)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = win ? '#4CAF50' : '#F44336';
-                ctx.font = 'bold 50px Arial';
-                ctx.fillText(win ? '胜 利 !' : '游戏结束', canvas.width / 2, canvas.height / 2 - 20);
-                ctx.fillStyle = '#fff';
-                ctx.font = '20px Arial';
-                ctx.fillText(`最终得分: ${score}`, canvas.width / 2, canvas.height / 2 + 30);
-                ctx.font = '16px Arial';
-                ctx.fillStyle = '#aaa';
-                ctx.fillText('点击上方按钮重新开始', canvas.width / 2, canvas.height / 2 + 70);
-            }
         }
 
         function update() {
@@ -408,17 +442,14 @@
                     let wall = walls[j];
                     if (rectIntersect(bullet, wall)) {
                         bullet.dead = true;
-                        if (wall.type === 'brick') {
-                            walls.splice(j, 1);
-                        }
+                        if (wall.type === 'brick') walls.splice(j, 1);
                         break;
                     }
                 }
 
                 if (rectIntersect(bullet, base)) {
                     bullet.dead = true;
-                    gameOver = true;
-                    win = false;
+                    endGame(false);
                 }
 
                 if (bullet.isPlayer) {
@@ -436,7 +467,7 @@
                     if (player.hp > 0 && rectIntersect(bullet, player)) {
                         bullet.dead = true;
                         player.hp = 0;
-                        gameOver = true;
+                        endGame(false);
                     }
                 }
 
@@ -444,8 +475,7 @@
             }
 
             if (enemies.every(e => e.hp === 0)) {
-                gameOver = true;
-                win = true;
+                endGame(true);
             }
         }
 
@@ -455,10 +485,8 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // 启动游戏
         initGame();
         gameLoop();
-
     </script>
 </body>
 </html>
