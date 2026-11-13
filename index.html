@@ -1,9 +1,9 @@
-       <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>坦克大战 - 慢动作版</title>
+    <title>坦克大战 - 极慢养生版</title>
     <style>
         body {
             margin: 0;
@@ -39,6 +39,7 @@
             border: 1px solid #555;
         }
         .highlight { color: #4CAF50; font-weight: bold; }
+        .key-hint { color: #ffaa00; font-weight: bold; }
         
         #restartBtn {
             background-color: #4CAF50;
@@ -54,12 +55,11 @@
         #restartBtn:hover { background-color: #45a049; }
         #restartBtn:active { background-color: #3d8b40; }
 
-        /* 游戏结束/胜利 悬浮层 */
         #gameOverlay {
             position: absolute;
-            top: 4px; left: 4px; right: 4px; bottom: 4px; /* 适应边框 */
+            top: 4px; left: 4px; right: 4px; bottom: 4px; 
             background-color: rgba(0, 0, 0, 0.85);
-            display: none; /* 默认隐藏 */
+            display: none; 
             flex-direction: column;
             justify-content: center;
             align-items: center;
@@ -94,7 +94,6 @@
 
     <div class="game-wrapper">
         <canvas id="gameCanvas" width="600" height="600"></canvas>
-        <!-- 游戏结束悬浮层 -->
         <div id="gameOverlay">
             <h2 id="overlayTitle">游戏结束</h2>
             <p id="overlayScore">最终得分: 0</p>
@@ -103,7 +102,8 @@
     </div>
 
     <div id="ui">
-        <span>WASD / 方向键 移动 | 空格键 开火</span>
+        <span>移动: <span class="key-hint">WASD / 方向键</span></span>
+        <span>开火: <span class="key-hint">J 键 / 空格键</span></span>
         <span id="scoreDisplay">得分: <span class="highlight">0</span></span>
         <span id="enemyDisplay">剩余敌人: <span class="highlight">4</span></span>
         <button id="restartBtn">重新开始</button>
@@ -115,38 +115,38 @@
         const scoreEl = document.querySelector('#scoreDisplay .highlight');
         const enemyEl = document.querySelector('#enemyDisplay .highlight');
         
-        // 按钮和悬浮层
         const topRestartBtn = document.getElementById('restartBtn');
         const overlayRestartBtn = document.getElementById('overlayRestartBtn');
         const gameOverlay = document.getElementById('gameOverlay');
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayScore = document.getElementById('overlayScore');
 
-        // ---- 核心速度配置 ----
+        // ---- 核心速度配置 (再次削弱) ----
         const TILE_SIZE = 30;
         const COLS = 20;
         const ROWS = 20;
-        const TANK_SPEED = 1;     // 原为2，减半
-        const BULLET_SPEED = 3;   // 原为6，减半
-        const SHOOT_COOLDOWN = 12; // 0.2秒 (60帧 * 0.2 = 12帧)
+        const TANK_SPEED = 0.5;     // 玩家移速 (极慢)
+        const BULLET_SPEED = 1.5;   // 玩家炮弹速度 (极慢)
+        const SHOOT_COOLDOWN = 20;  // 射击间隔 (约0.33秒)
 
         const DIRS = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
 
+        // 改用 code 监听，避免输入法拦截
         const keys = {
-            w: false, a: false, s: false, d: false,
+            KeyW: false, KeyA: false, KeyS: false, KeyD: false,
             ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false,
-            ' ': false
+            Space: false, KeyJ: false
         };
 
         window.addEventListener('keydown', e => {
-            if (keys.hasOwnProperty(e.key)) {
-                keys[e.key] = true;
-                e.preventDefault(); 
+            if (keys.hasOwnProperty(e.code)) {
+                keys[e.code] = true;
+                e.preventDefault(); // 阻止页面滚动
             }
         });
         window.addEventListener('keyup', e => {
-            if (keys.hasOwnProperty(e.key)) {
-                keys[e.key] = false;
+            if (keys.hasOwnProperty(e.code)) {
+                keys[e.code] = false;
                 e.preventDefault();
             }
         });
@@ -188,8 +188,7 @@
                 this.color = color;
                 this.dir = isPlayer ? DIRS.UP : DIRS.DOWN;
                 this.isPlayer = isPlayer;
-                // 速度调整：玩家等于基础速度，敌人等于基础速度的40% (比原版更慢)
-                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.4;
+                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.3; // 敌人移速为玩家的30%
                 this.cooldown = 0;
                 this.aiTimer = 0;
                 this.hp = 1;
@@ -232,15 +231,18 @@
                 let moving = false;
 
                 if (this.isPlayer) {
-                    if (keys.w || keys.ArrowUp) { this.dir = DIRS.UP; dy = -this.speed; moving = true; }
-                    else if (keys.s || keys.ArrowDown) { this.dir = DIRS.DOWN; dy = this.speed; moving = true; }
-                    else if (keys.a || keys.ArrowLeft) { this.dir = DIRS.LEFT; dx = -this.speed; moving = true; }
-                    else if (keys.d || keys.ArrowRight) { this.dir = DIRS.RIGHT; dx = this.speed; moving = true; }
+                    // 独立判断移动
+                    if (keys.KeyW || keys.ArrowUp) { this.dir = DIRS.UP; dy = -this.speed; moving = true; }
+                    else if (keys.KeyS || keys.ArrowDown) { this.dir = DIRS.DOWN; dy = this.speed; moving = true; }
+                    else if (keys.KeyA || keys.ArrowLeft) { this.dir = DIRS.LEFT; dx = -this.speed; moving = true; }
+                    else if (keys.KeyD || keys.ArrowRight) { this.dir = DIRS.RIGHT; dx = this.speed; moving = true; }
 
-                    if (keys[' '] && this.cooldown === 0) {
+                    // 独立判断开火 (J键 或 空格)
+                    if ((keys.KeyJ || keys.Space) && this.cooldown === 0) {
                         this.shoot();
                     }
                 } else {
+                    // 敌人 AI
                     this.aiTimer--;
                     if (this.aiTimer <= 0) {
                         this.dir = Math.floor(Math.random() * 4);
@@ -285,7 +287,6 @@
             }
 
             shoot() {
-                // 射击间隔设置为 0.2s (12帧)
                 this.cooldown = SHOOT_COOLDOWN; 
                 let bx = this.x + this.w / 2 - 3;
                 let by = this.y + this.h / 2 - 3;
@@ -302,8 +303,8 @@
                 this.dir = dir;
                 this.isPlayer = isPlayer;
                 this.dead = false;
-                // 玩家炮弹使用减速后的基础速度，敌人炮弹再慢一点（乘0.6）
-                this.speed = isPlayer ? BULLET_SPEED : BULLET_SPEED * 0.6; 
+                // 敌人子弹速度为玩家的50%
+                this.speed = isPlayer ? BULLET_SPEED : BULLET_SPEED * 0.5; 
             }
 
             update() {
@@ -339,8 +340,9 @@
         let score = 0;
 
         function initGame() {
-            // 隐藏结束悬浮层
             gameOverlay.style.display = 'none';
+            // 清理按键状态，防止开局自带移动
+            for (let k in keys) keys[k] = false;
 
             player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, '#4CAF50', true);
             enemies = [];
@@ -385,15 +387,12 @@
         function endGame(isWin) {
             gameOver = true;
             win = isWin;
-            
-            // 更新悬浮层内容并显示
             overlayTitle.textContent = isWin ? '胜 利 !' : '游戏结束';
             overlayTitle.style.color = isWin ? '#4CAF50' : '#F44336';
             overlayScore.textContent = `最终得分: ${score}`;
             gameOverlay.style.display = 'flex';
         }
 
-        // 绑定两个重新开始按钮的事件
         topRestartBtn.addEventListener('click', initGame);
         overlayRestartBtn.addEventListener('click', initGame);
 
