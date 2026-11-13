@@ -26,6 +26,8 @@
             border: 4px solid #555;
             box-shadow: 0 0 25px rgba(0,150,255,0.3);
             display: block;
+            outline: none; /* 去除点击时的默认高亮边框 */
+            cursor: crosshair;
         }
         #ui {
             margin-top: 15px;
@@ -51,6 +53,7 @@
             cursor: pointer;
             transition: background 0.2s;
             font-weight: bold;
+            outline: none;
         }
         #restartBtn:hover { background-color: #45a049; }
         #restartBtn:active { background-color: #3d8b40; }
@@ -85,6 +88,7 @@
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             transition: transform 0.1s, background 0.2s;
+            outline: none;
         }
         #overlayRestartBtn:hover { background-color: #1976D2; }
         #overlayRestartBtn:active { transform: scale(0.95); }
@@ -93,7 +97,8 @@
 <body>
 
     <div class="game-wrapper">
-        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <!-- 加上 tabindex="0" 让 Canvas 可以接收键盘焦点 -->
+        <canvas id="gameCanvas" width="600" height="600" tabindex="0"></canvas>
         <div id="gameOverlay">
             <h2 id="overlayTitle">游戏结束</h2>
             <p id="overlayScore">最终得分: 0</p>
@@ -103,7 +108,7 @@
 
     <div id="ui">
         <span>移动: <span class="key-hint">WASD / 方向键</span></span>
-        <span>开火: <span class="key-hint">J 键 / 空格键</span></span>
+        <span>开火: <span class="key-hint">鼠标左键 / J 键</span></span>
         <span id="scoreDisplay">得分: <span class="highlight">0</span></span>
         <span id="enemyDisplay">剩余敌人: <span class="highlight">4</span></span>
         <button id="restartBtn">重新开始</button>
@@ -121,13 +126,13 @@
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayScore = document.getElementById('overlayScore');
 
-        // ---- 核心速度配置 (再次削弱) ----
+        // ---- 核心速度配置 (再次极度削弱) ----
         const TILE_SIZE = 30;
         const COLS = 20;
         const ROWS = 20;
-        const TANK_SPEED = 0.5;     // 玩家移速 (极慢)
-        const BULLET_SPEED = 1.5;   // 玩家炮弹速度 (极慢)
-        const SHOOT_COOLDOWN = 20;  // 射击间隔 (约0.33秒)
+        const TANK_SPEED = 0.4;     // 玩家移速再次减半
+        const BULLET_SPEED = 1.2;   // 玩家炮弹速度再次减半
+        const SHOOT_COOLDOWN = 30;  // 射击间隔延长至约 0.5秒
 
         const DIRS = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
 
@@ -135,20 +140,38 @@
         const keys = {
             KeyW: false, KeyA: false, KeyS: false, KeyD: false,
             ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false,
-            Space: false, KeyJ: false
+            KeyJ: false
         };
+
+        // 鼠标开火状态
+        let isMouseShooting = false;
 
         window.addEventListener('keydown', e => {
             if (keys.hasOwnProperty(e.code)) {
                 keys[e.code] = true;
-                e.preventDefault(); // 阻止页面滚动
+                // 仅拦截方向键的滚动行为，不拦截按键本身
+                if (e.code.startsWith('Arrow')) e.preventDefault(); 
             }
         });
         window.addEventListener('keyup', e => {
             if (keys.hasOwnProperty(e.code)) {
                 keys[e.code] = false;
-                e.preventDefault();
+                if (e.code.startsWith('Arrow')) e.preventDefault();
             }
+        });
+
+        // 鼠标点击画布开火
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 0) { 
+                isMouseShooting = true;
+                canvas.focus(); // 点击时强制让画布获取焦点
+            }
+        });
+        canvas.addEventListener('mouseup', e => {
+            if (e.button === 0) isMouseShooting = false;
+        });
+        canvas.addEventListener('mouseleave', () => {
+            isMouseShooting = false;
         });
 
         function rectIntersect(r1, r2) {
@@ -188,7 +211,7 @@
                 this.color = color;
                 this.dir = isPlayer ? DIRS.UP : DIRS.DOWN;
                 this.isPlayer = isPlayer;
-                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.3; // 敌人移速为玩家的30%
+                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.3; 
                 this.cooldown = 0;
                 this.aiTimer = 0;
                 this.hp = 1;
@@ -231,18 +254,17 @@
                 let moving = false;
 
                 if (this.isPlayer) {
-                    // 独立判断移动
+                    // 优先级：上 > 下 > 左 > 右
                     if (keys.KeyW || keys.ArrowUp) { this.dir = DIRS.UP; dy = -this.speed; moving = true; }
                     else if (keys.KeyS || keys.ArrowDown) { this.dir = DIRS.DOWN; dy = this.speed; moving = true; }
                     else if (keys.KeyA || keys.ArrowLeft) { this.dir = DIRS.LEFT; dx = -this.speed; moving = true; }
                     else if (keys.KeyD || keys.ArrowRight) { this.dir = DIRS.RIGHT; dx = this.speed; moving = true; }
 
-                    // 独立判断开火 (J键 或 空格)
-                    if ((keys.KeyJ || keys.Space) && this.cooldown === 0) {
+                    // 独立判断开火 (鼠标左键 或 J键)
+                    if ((isMouseShooting || keys.KeyJ) && this.cooldown === 0) {
                         this.shoot();
                     }
                 } else {
-                    // 敌人 AI
                     this.aiTimer--;
                     if (this.aiTimer <= 0) {
                         this.dir = Math.floor(Math.random() * 4);
@@ -303,7 +325,6 @@
                 this.dir = dir;
                 this.isPlayer = isPlayer;
                 this.dead = false;
-                // 敌人子弹速度为玩家的50%
                 this.speed = isPlayer ? BULLET_SPEED : BULLET_SPEED * 0.5; 
             }
 
@@ -341,8 +362,9 @@
 
         function initGame() {
             gameOverlay.style.display = 'none';
-            // 清理按键状态，防止开局自带移动
+            // 清理按键状态
             for (let k in keys) keys[k] = false;
+            isMouseShooting = false;
 
             player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, '#4CAF50', true);
             enemies = [];
@@ -377,6 +399,9 @@
                 enemies.push(new Tank(spawn.x, spawn.y, '#F44336', false));
             }
             updateEnemyUI();
+            
+            // 重新开始后让画布重新获取焦点
+            setTimeout(() => canvas.focus(), 50);
         }
 
         function updateEnemyUI() {
