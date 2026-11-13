@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>坦克大战 - 多地图版</title>
+    <title>坦克大战 - 养生版</title>
     <style>
         body {
             margin: 0;
@@ -27,13 +27,33 @@
             margin-top: 15px;
             font-size: 18px;
             display: flex;
-            gap: 30px;
+            gap: 20px;
+            align-items: center;
             background: #333;
             padding: 10px 20px;
             border-radius: 8px;
             border: 1px solid #555;
         }
         .highlight { color: #4CAF50; font-weight: bold; }
+        
+        /* 重新开始按钮样式 */
+        #restartBtn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: bold;
+        }
+        #restartBtn:hover {
+            background-color: #45a049;
+        }
+        #restartBtn:active {
+            background-color: #3d8b40;
+        }
     </style>
 </head>
 <body>
@@ -43,6 +63,7 @@
         <span>WASD / 方向键 移动 | 空格键 开火</span>
         <span id="scoreDisplay">得分: <span class="highlight">0</span></span>
         <span id="enemyDisplay">剩余敌人: <span class="highlight">4</span></span>
+        <button id="restartBtn">重新开始</button>
     </div>
 
     <script>
@@ -50,6 +71,7 @@
         const ctx = canvas.getContext('2d');
         const scoreEl = document.querySelector('#scoreDisplay .highlight');
         const enemyEl = document.querySelector('#enemyDisplay .highlight');
+        const restartBtn = document.getElementById('restartBtn');
 
         // 游戏配置
         const TILE_SIZE = 30;
@@ -87,76 +109,27 @@
         }
 
         // ---- 预定义的3套地图 ----
-        // 0: 空地, 1: 砖墙(可破坏), 2: 钢墙(不可破坏)
         const MAPS = [
-            // 地图 1: 经典对称
             [
-                "00000000000000000000",
-                "00110000000000001100",
-                "00110000000000001100",
-                "00110000220000001100",
-                "00000000000000000000",
-                "00001100000000110000",
-                "00001100000000110000",
-                "00220000000000000022",
-                "00001100000000110000",
-                "00001100000000110000",
-                "00000000000000000000",
-                "00110000220000001100",
-                "00110000000000001100",
-                "00110000000000001100",
-                "00000000000000000000",
-                "00000000000000000000",
-                "00000000000000000000",
-                "00000000110000000000",
-                "00000000110000000000",
-                "00000000000000000000"
+                "00000000000000000000", "00110000000000001100", "00110000000000001100", "00110000220000001100",
+                "00000000000000000000", "00001100000000110000", "00001100000000110000", "00220000000000000022",
+                "00001100000000110000", "00001100000000110000", "00000000000000000000", "00110000220000001100",
+                "00110000000000001100", "00110000000000001100", "00000000000000000000", "00000000000000000000",
+                "00000000000000000000", "00000000110000000000", "00000000110000000000", "00000000000000000000"
             ],
-            // 地图 2: 巷战掩体
             [
-                "00000000000000000000",
-                "00000000000000000000",
-                "00111100000011110000",
-                "00111100000011110000",
-                "00000000000000000000",
-                "00000000220000000000",
-                "00110000000000110000",
-                "00110000000000110000",
-                "00000000000000000000",
-                "00002200000022000000",
-                "00000000000000000000",
-                "00111100000011110000",
-                "00111100000011110000",
-                "00000000000000000000",
-                "00000000220000000000",
-                "00000000000000000000",
-                "00110000000000110000",
-                "00000000110000000000",
-                "00000000110000000000",
-                "00000000000000000000"
+                "00000000000000000000", "00000000000000000000", "00111100000011110000", "00111100000011110000",
+                "00000000000000000000", "00000000220000000000", "00110000000000110000", "00110000000000110000",
+                "00000000000000000000", "00002200000022000000", "00000000000000000000", "00111100000011110000",
+                "00111100000011110000", "00000000000000000000", "00000000220000000000", "00000000000000000000",
+                "00110000000000110000", "00000000110000000000", "00000000110000000000", "00000000000000000000"
             ],
-            // 地图 3: 迷宫风格
             [
-                "00000000000000000000",
-                "00110000000000001100",
-                "00000000000000000000",
-                "00001111000011110000",
-                "00001111000011110000",
-                "00000000000000000000",
-                "00220000000000000022",
-                "00110000000000001100",
-                "00000000220000000000",
-                "00000000220000000000",
-                "00001100000000110000",
-                "00001100000000110000",
-                "00000000000000000000",
-                "00000000000000000000",
-                "00110000220000001100",
-                "00110000000000001100",
-                "00000000000000000000",
-                "00000000110000000000",
-                "00000000110000000000",
-                "00000000000000000000"
+                "00000000000000000000", "00110000000000001100", "00000000000000000000", "00001111000011110000",
+                "00001111000011110000", "00000000000000000000", "00220000000000000022", "00110000000000001100",
+                "00000000220000000000", "00000000220000000000", "00001100000000110000", "00001100000000110000",
+                "00000000000000000000", "00000000000000000000", "00110000220000001100", "00110000000000001100",
+                "00000000000000000000", "00000000110000000000", "00000000110000000000", "00000000000000000000"
             ]
         ];
 
@@ -169,8 +142,8 @@
                 this.color = color;
                 this.dir = isPlayer ? DIRS.UP : DIRS.DOWN;
                 this.isPlayer = isPlayer;
-                // 降低敌人移速
-                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.45;
+                // 再次降低敌人移动速度 (从0.45降到了0.3)
+                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.3;
                 this.cooldown = 0;
                 this.aiTimer = 0;
                 this.hp = 1;
@@ -178,7 +151,6 @@
 
             draw() {
                 if (this.hp <= 0) {
-                    // 残骸
                     ctx.fillStyle = '#333';
                     ctx.fillRect(this.x, this.y, this.w, this.h);
                     ctx.strokeStyle = '#555';
@@ -191,11 +163,9 @@
                     return; 
                 }
 
-                // 坦克主体
                 ctx.fillStyle = this.color;
                 ctx.fillRect(this.x, this.y, this.w, this.h);
 
-                // 炮管
                 ctx.fillStyle = '#ccc';
                 const barrelLen = 12;
                 const barrelWidth = 6;
@@ -210,7 +180,6 @@
 
             update() {
                 if (this.hp <= 0) return;
-
                 if (this.cooldown > 0) this.cooldown--;
 
                 let dx = 0, dy = 0;
@@ -226,12 +195,12 @@
                         this.shoot();
                     }
                 } else {
-                    // 敌人 AI
+                    // 敌人 AI 发呆时间更长了
                     this.aiTimer--;
                     if (this.aiTimer <= 0) {
                         this.dir = Math.floor(Math.random() * 4);
-                        this.aiTimer = 40 + Math.random() * 80; // 发呆时间变长
-                        if (Math.random() > 0.4) this.shoot();
+                        this.aiTimer = 60 + Math.random() * 100;
+                        if (Math.random() > 0.5) this.shoot();
                     }
                     if (this.dir === DIRS.UP) dy = -this.speed;
                     if (this.dir === DIRS.DOWN) dy = this.speed;
@@ -256,7 +225,6 @@
                             break;
                         }
                     }
-                    // 避免开到基地上
                     if (rectIntersect({x: nextX, y: nextY, w: this.w, h: this.h}, base)) {
                         collided = true;
                     }
@@ -265,15 +233,14 @@
                         this.x = nextX;
                         this.y = nextY;
                     } else if (!this.isPlayer) {
-                        // 撞墙随机换向
                         this.dir = Math.floor(Math.random() * 4);
-                        this.aiTimer = 20;
+                        this.aiTimer = 30;
                     }
                 }
             }
 
             shoot() {
-                this.cooldown = this.isPlayer ? 20 : 80; 
+                this.cooldown = this.isPlayer ? 20 : 100; // 敌人开火间隔再次加长
                 let bx = this.x + this.w / 2 - 3;
                 let by = this.y + this.h / 2 - 3;
                 bullets.push(new Bullet(bx, by, this.dir, this.isPlayer));
@@ -289,8 +256,8 @@
                 this.dir = dir;
                 this.isPlayer = isPlayer;
                 this.dead = false;
-                // 降低敌人子弹速度
-                this.speed = isPlayer ? BULLET_SPEED : BULLET_SPEED * 0.5; 
+                // 继续降低敌人子弹速度 (从0.5降到了0.35)
+                this.speed = isPlayer ? BULLET_SPEED : BULLET_SPEED * 0.35; 
             }
 
             update() {
@@ -305,12 +272,12 @@
             }
 
             draw() {
-                ctx.fillStyle = this.isPlayer ? '#00ffff' : '#ffaa00';
+                // 给敌人子弹换个颜色，因为飞得慢，明显一点
+                ctx.fillStyle = this.isPlayer ? '#00ffff' : '#ff4444';
                 ctx.beginPath();
                 ctx.arc(this.x + 3, this.y + 3, 3.5, 0, Math.PI * 2);
                 ctx.fill();
-                // 加点光晕效果
-                ctx.fillStyle = this.isPlayer ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 170, 0, 0.3)';
+                ctx.fillStyle = this.isPlayer ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 68, 68, 0.3)';
                 ctx.beginPath();
                 ctx.arc(this.x + 3, this.y + 3, 6, 0, Math.PI * 2);
                 ctx.fill();
@@ -327,6 +294,7 @@
         let win = false;
         let score = 0;
 
+        // 初始化游戏逻辑 (绑定到了按钮和页面加载)
         function initGame() {
             player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, '#4CAF50', true);
             enemies = [];
@@ -337,7 +305,6 @@
             score = 0;
             scoreEl.textContent = '0';
 
-            // 1. 随机选一张地图
             const mapData = MAPS[Math.floor(Math.random() * MAPS.length)];
             
             for (let r = 0; r < ROWS; r++) {
@@ -351,11 +318,9 @@
                 }
             }
 
-            // 强制在老鹰周围加一圈砖墙保护
             walls.push({ x: 8 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
             walls.push({ x: 11 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
 
-            // 2. 增加敌人数量 (生成4个)
             const enemySpawns = [
                 {x: 0, y: 0}, 
                 {x: 9 * TILE_SIZE, y: 0}, 
@@ -373,6 +338,11 @@
             enemyEl.textContent = alive;
         }
 
+        // 重新开始按钮点击事件
+        restartBtn.addEventListener('click', () => {
+            initGame();
+        });
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -389,7 +359,6 @@
                 if (wall.type === 'brick') {
                     ctx.fillStyle = '#8B4513';
                     ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-                    // 加些细节纹理
                     ctx.strokeStyle = '#5c2e0a';
                     ctx.strokeRect(wall.x + 2, wall.y + 2, wall.w - 4, wall.h - 4);
                 } else {
@@ -421,7 +390,7 @@
                 ctx.fillText(`最终得分: ${score}`, canvas.width / 2, canvas.height / 2 + 30);
                 ctx.font = '16px Arial';
                 ctx.fillStyle = '#aaa';
-                ctx.fillText('刷新页面重新开始', canvas.width / 2, canvas.height / 2 + 70);
+                ctx.fillText('点击上方按钮重新开始', canvas.width / 2, canvas.height / 2 + 70);
             }
         }
 
@@ -435,7 +404,6 @@
                 let bullet = bullets[i];
                 bullet.update();
 
-                // 子弹打墙
                 for (let j = walls.length - 1; j >= 0; j--) {
                     let wall = walls[j];
                     if (rectIntersect(bullet, wall)) {
@@ -447,14 +415,12 @@
                     }
                 }
 
-                // 子弹打基地
                 if (rectIntersect(bullet, base)) {
                     bullet.dead = true;
                     gameOver = true;
                     win = false;
                 }
 
-                // 子弹打坦克
                 if (bullet.isPlayer) {
                     for (let enemy of enemies) {
                         if (enemy.hp > 0 && rectIntersect(bullet, enemy)) {
@@ -477,7 +443,6 @@
                 if (bullet.dead) bullets.splice(i, 1);
             }
 
-            // 检查胜利
             if (enemies.every(e => e.hp === 0)) {
                 gameOver = true;
                 win = true;
