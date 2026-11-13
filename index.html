@@ -3,27 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>坦克大战 - 自定义版</title>
+    <title>坦克大战 - 次时代版</title>
+    <!-- 引入更具科技感的字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4CAF50;
-            --primary-hover: #45a049;
-            --bg-color: #1a1a1a;
-            --panel-bg: #2a2a2a;
-            --text-color: #fff;
+            --primary: #00e5ff;
+            --primary-hover: #00b8cc;
+            --accent: #ff0055;
+            --bg-color: #0a0a10;
+            --panel-bg: rgba(20, 25, 40, 0.75);
+            --text-color: #e0e0e0;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --font-heading: 'Orbitron', sans-serif;
+            --font-body: 'Rajdhani', sans-serif;
         }
 
         body {
             margin: 0;
             padding: 0;
-            background-color: var(--bg-color);
+            background: radial-gradient(circle at center, #1a2030 0%, #050508 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
             color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--font-body);
             overflow: hidden;
         }
 
@@ -31,12 +37,14 @@
             position: relative;
             width: 600px;
             height: 600px;
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(0, 229, 255, 0.15), inset 0 0 20px rgba(0,0,0,0.8);
         }
 
         canvas {
-            background-color: #000;
-            border: 4px solid #555;
-            box-shadow: 0 0 25px rgba(0, 150, 255, 0.3);
+            background-color: #0d1117;
+            border: 2px solid rgba(0, 229, 255, 0.3);
+            border-radius: 12px;
             display: block;
             outline: none;
             cursor: crosshair;
@@ -46,51 +54,62 @@
         }
 
         #ui {
-            margin-top: 15px;
-            font-size: 18px;
+            margin-top: 20px;
+            font-size: 20px;
+            font-family: var(--font-heading);
             display: flex;
-            gap: 20px;
+            gap: 30px;
             align-items: center;
-            background: #333;
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: 1px solid #555;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            padding: 12px 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
 
-        .highlight { color: var(--primary); font-weight: bold; }
-        .key-hint { color: #ffaa00; font-weight: bold; }
+        .highlight { color: var(--primary); text-shadow: 0 0 10px rgba(0, 229, 255, 0.5); }
+        .key-hint { color: #ffaa00; font-weight: 600; }
 
         /* 遮罩层基础样式 */
         .overlay {
             position: absolute;
-            top: 4px; left: 4px; right: 4px; bottom: 4px;
-            background-color: rgba(0, 0, 0, 0.9);
+            top: 2px; left: 2px; right: 2px; bottom: 2px;
+            background: rgba(5, 10, 20, 0.85);
+            backdrop-filter: blur(8px);
             display: none; 
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 10;
-            border-radius: 2px;
+            border-radius: 10px;
+            animation: fadeIn 0.3s ease-out;
         }
 
-        .overlay.active {
-            display: flex;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
         }
+
+        .overlay.active { display: flex; }
 
         .overlay h2 {
-            font-size: 50px;
-            margin: 0 0 20px 0;
-            text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            font-family: var(--font-heading);
+            font-size: 52px;
+            margin: 0 0 25px 0;
+            color: #fff;
+            text-shadow: 0 0 20px var(--primary);
+            letter-spacing: 2px;
         }
 
-        /* 菜单面板通用样式 */
+        /* 菜单面板 */
         .menu-panel {
-            background-color: var(--panel-bg);
-            padding: 30px 40px;
-            border-radius: 12px;
-            border: 1px solid #444;
-            width: 350px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: var(--panel-bg);
+            padding: 35px 45px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            width: 360px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
             text-align: center;
         }
 
@@ -98,31 +117,31 @@
         .main-menu-btn {
             display: block;
             width: 100%;
-            margin-bottom: 15px;
-            padding: 15px;
-            font-size: 20px;
+            margin-bottom: 18px;
+            padding: 16px;
+            font-size: 22px;
         }
-        .main-menu-btn:last-child {
-            margin-bottom: 0;
-        }
+        .main-menu-btn:last-child { margin-bottom: 0; }
 
         /* 设置项 */
         .setting-item {
-            margin-bottom: 20px;
+            margin-bottom: 22px;
             text-align: left;
         }
 
         .setting-item label {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 16px;
-            color: #ddd;
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #ccc;
+            font-weight: 600;
         }
 
         .setting-item .value-display {
             color: var(--primary);
-            font-weight: bold;
+            font-weight: 700;
+            font-family: var(--font-heading);
         }
 
         input[type="range"] {
@@ -135,26 +154,29 @@
         input[type="range"]::-webkit-slider-runnable-track {
             width: 100%;
             height: 6px;
-            background: #444;
+            background: #222;
             border-radius: 3px;
+            border: 1px solid #333;
         }
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 18px;
-            width: 18px;
+            height: 20px;
+            width: 20px;
             border-radius: 50%;
             background: var(--primary);
-            margin-top: -6px;
+            margin-top: -8px;
+            box-shadow: 0 0 10px var(--primary);
             transition: transform 0.1s;
         }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
         /* 皮肤选择器 */
         .color-swatches {
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
             flex-wrap: wrap;
         }
 
@@ -163,50 +185,60 @@
             height: 50px;
             border-radius: 50%;
             cursor: pointer;
-            border: 3px solid transparent;
-            transition: transform 0.2s, border-color 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 3px solid rgba(255,255,255,0.1);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        .color-swatch:hover {
-            transform: scale(1.1);
-        }
-
+        .color-swatch:hover { transform: scale(1.15); }
         .color-swatch.selected {
             border-color: #fff;
-            transform: scale(1.1);
+            transform: scale(1.15);
+            box-shadow: 0 0 15px currentColor;
         }
 
         /* 按钮通用样式 */
         .btn {
-            background-color: var(--primary);
-            color: white;
+            background: linear-gradient(135deg, var(--primary) 0%, #007799 100%);
+            color: #fff;
             border: none;
             padding: 12px 24px;
+            font-family: var(--font-heading);
             font-size: 16px;
-            border-radius: 6px;
+            font-weight: 700;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s, transform 0.1s;
+            transition: all 0.2s;
             outline: none;
             width: 100%;
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2);
+            letter-spacing: 1px;
         }
 
-        .btn:hover { background-color: var(--primary-hover); }
-        .btn:active { transform: scale(0.98); }
+        .btn:hover {
+            background: linear-gradient(135deg, #00b8cc 0%, #005566 100%);
+            box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        .btn:active { transform: translateY(0); }
         
         .btn-secondary {
-            background-color: #555;
-            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
         }
-        .btn-secondary:hover { background-color: #666; }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            color: var(--primary);
+        }
 
         #uiRestartBtn {
             width: auto;
             margin-top: 0;
-            padding: 8px 16px;
+            padding: 10px 20px;
+            font-size: 16px;
         }
-
     </style>
 </head>
 <body>
@@ -216,32 +248,32 @@
         
         <!-- 1. 主菜单页面 -->
         <div id="mainMenuScreen" class="overlay active">
-            <h2>坦克大战</h2>
+            <h2>TANK COMBAT</h2>
             <div class="menu-panel">
-                <button id="goToStartBtn" class="btn main-menu-btn">开始游戏</button>
-                <button id="goToSettingsBtn" class="btn main-menu-btn btn-secondary">游戏设置</button>
-                <button id="goToSkinBtn" class="btn main-menu-btn btn-secondary">更换皮肤</button>
+                <button id="goToStartBtn" class="btn main-menu-btn">开始行动</button>
+                <button id="goToSettingsBtn" class="btn main-menu-btn btn-secondary">系统设置</button>
+                <button id="goToSkinBtn" class="btn main-menu-btn btn-secondary">涂装变更</button>
             </div>
         </div>
 
         <!-- 2. 游戏设置面板 -->
         <div id="settingsScreen" class="overlay">
-            <h2>游戏设置</h2>
+            <h2>系统设置</h2>
             <div class="menu-panel">
                 <div class="setting-item">
-                    <label>玩家移动速度 <span id="valPlayerSpeed" class="value-display">0.4</span></label>
+                    <label>移动速度 <span id="valPlayerSpeed" class="value-display">0.4</span></label>
                     <input type="range" id="playerSpeed" min="0.1" max="2.0" step="0.1" value="0.4">
                 </div>
                 <div class="setting-item">
-                    <label>敌人移动速度 <span id="valEnemySpeed" class="value-display">0.15</span></label>
+                    <label>敌方移速 <span id="valEnemySpeed" class="value-display">0.15</span></label>
                     <input type="range" id="enemySpeed" min="0.05" max="1.0" step="0.05" value="0.15">
                 </div>
                 <div class="setting-item">
-                    <label>敌人数量 <span id="valEnemyCount" class="value-display">4</span></label>
+                    <label>敌方数量 <span id="valEnemyCount" class="value-display">4</span></label>
                     <input type="range" id="enemyCount" min="1" max="8" step="1" value="4">
                 </div>
                 <div class="setting-item">
-                    <label>射击冷却 (帧) <span id="valShootCooldown" class="value-display">30</span></label>
+                    <label>武器冷却 <span id="valShootCooldown" class="value-display">30</span></label>
                     <input type="range" id="shootCooldown" min="10" max="60" step="5" value="30">
                 </div>
                 <button id="saveSettingsBtn" class="btn">保存并返回</button>
@@ -250,9 +282,9 @@
 
         <!-- 3. 皮肤选择面板 -->
         <div id="skinScreen" class="overlay">
-            <h2>选择皮肤</h2>
+            <h2>涂装变更</h2>
             <div class="menu-panel">
-                <p style="color: #aaa; margin-top: 0; margin-bottom: 20px;">敌方坦克固定为红色，请选择其他颜色</p>
+                <p style="color: #aaa; margin-top: 0; margin-bottom: 20px; font-size: 16px;">敌方部队固定为红色，请选择我方专属涂装</p>
                 <div class="color-swatches" id="colorSwatchesContainer">
                     <!-- JS 动态生成色块 -->
                 </div>
@@ -263,8 +295,8 @@
         <!-- 4. 游戏结束界面 -->
         <div id="gameOverScreen" class="overlay">
             <h2 id="overlayTitle">游戏结束</h2>
-            <p id="overlayScore" style="font-size: 24px; margin-bottom: 20px;">最终得分: 0</p>
-            <button id="overlayRestartBtn" class="btn" style="width: 250px;">重新开始</button>
+            <p id="overlayScore" style="font-size: 26px; margin-bottom: 30px; font-family: var(--font-heading);">最终得分: 0</p>
+            <button id="overlayRestartBtn" class="btn" style="width: 250px; margin-bottom: 15px;">重新出击</button>
             <button id="backToMenuBtn" class="btn btn-secondary" style="width: 250px;">返回主菜单</button>
         </div>
     </div>
@@ -274,7 +306,7 @@
         <span>开火: <span class="key-hint">鼠标左键 / J 键</span></span>
         <span id="scoreDisplay">得分: <span class="highlight">0</span></span>
         <span id="enemyDisplay">剩余敌人: <span class="highlight">0</span></span>
-        <button id="uiRestartBtn" class="btn">重新开始</button>
+        <button id="uiRestartBtn" class="btn">重置</button>
     </div>
 
     <script>
@@ -284,7 +316,6 @@
         const scoreEl = document.querySelector('#scoreDisplay .highlight');
         const enemyEl = document.querySelector('#enemyDisplay .highlight');
         
-        // 各个屏幕/面板
         const mainMenuScreen = document.getElementById('mainMenuScreen');
         const settingsScreen = document.getElementById('settingsScreen');
         const skinScreen = document.getElementById('skinScreen');
@@ -294,7 +325,6 @@
         const overlayScore = document.getElementById('overlayScore');
         const colorSwatchesContainer = document.getElementById('colorSwatchesContainer');
 
-        // 按钮
         const goToStartBtn = document.getElementById('goToStartBtn');
         const goToSettingsBtn = document.getElementById('goToSettingsBtn');
         const goToSkinBtn = document.getElementById('goToSkinBtn');
@@ -304,7 +334,6 @@
         const backToMenuBtn = document.getElementById('backToMenuBtn');
         const uiRestartBtn = document.getElementById('uiRestartBtn');
 
-        // 设置滑块 DOM
         const sliders = {
             playerSpeed: document.getElementById('playerSpeed'),
             enemySpeed: document.getElementById('enemySpeed'),
@@ -316,28 +345,25 @@
         const TILE_SIZE = 30;
         const COLS = 20;
         const ROWS = 20;
-        const BULLET_SPEED = 1.2; 
-        
-        // 敌方固定颜色
-        const ENEMY_COLOR = '#F44336'; 
+        const BULLET_SPEED = 1.5; 
+        const ENEMY_COLOR = '#ff3333'; 
 
-        // 玩家的可用皮肤（排除了红色及相近颜色）
+        // 玩家的可用皮肤
         const PLAYER_SKINS = [
-            { name: '经典绿', color: '#4CAF50' },
-            { name: '天空蓝', color: '#2196F3' },
-            { name: '土豪金', color: '#FFC107' },
-            { name: '基佬紫', color: '#9C27B0' },
-            { name: '青春青', color: '#00BCD4' },
-            { name: '雪原白', color: '#E0E0E0' }
+            { name: '极光绿', color: '#00ff88' },
+            { name: '离子蓝', color: '#00bfff' },
+            { name: '等离子黄', color: '#ffdd00' },
+            { name: '幽能紫', color: '#b800ff' },
+            { name: '冰晶白', color: '#e0f7fa' },
+            { name: '熔岩橙', color: '#ff6600' }
         ];
 
-        // 动态游戏配置
         let gameConfig = {
             playerSpeed: 0.4,
             enemySpeed: 0.15,
             enemyCount: 4,
             shootCooldown: 30,
-            playerColor: PLAYER_SKINS[0].color // 默认选第一个颜色
+            playerColor: PLAYER_SKINS[0].color 
         };
 
         const DIRS = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
@@ -376,12 +402,10 @@
             isMouseShooting = false;
         });
 
-        // ---- 碰撞检测 ----
         function rectIntersect(r1, r2) {
             return !(r2.x >= r1.x + r1.w || r2.x + r2.w <= r1.x || r2.y >= r1.y + r1.h || r2.y + r2.h <= r1.y);
         }
 
-        // ---- 地图数据 ----
         const MAPS = [
             [
                 "00000000000000000000", "00110000000000001100", "00110000000000001100", "00110000220000001100",
@@ -406,6 +430,37 @@
             ]
         ];
 
+        // ---- 粒子特效类 ----
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.life = 1.0;
+                this.decay = 0.02 + Math.random() * 0.03;
+                this.size = 2 + Math.random() * 3;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.95; // 摩擦力
+                this.vy *= 0.95;
+                this.life -= this.decay;
+            }
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        let particles = [];
+
         // ---- 坦克类 ----
         class Tank {
             constructor(x, y, color, isPlayer = false) {
@@ -416,34 +471,68 @@
                 this.color = color;
                 this.dir = isPlayer ? DIRS.UP : DIRS.DOWN;
                 this.isPlayer = isPlayer;
-                
                 this.speed = isPlayer ? gameConfig.playerSpeed : gameConfig.enemySpeed;
-                
                 this.cooldown = 0;
                 this.aiTimer = 0;
                 this.hp = 1;
             }
 
             draw() {
-                if (this.hp <= 0) {
-                    ctx.fillStyle = '#333';
-                    ctx.fillRect(this.x, this.y, this.w, this.h);
-                    ctx.strokeStyle = '#555';
-                    ctx.beginPath();
-                    ctx.moveTo(this.x, this.y);
-                    ctx.lineTo(this.x + this.w, this.y + this.h);
-                    ctx.moveTo(this.x + this.w, this.y);
-                    ctx.lineTo(this.x, this.y + this.h);
-                    ctx.stroke();
-                    return; 
+                if (this.hp <= 0) return; // 残骸已由特效代替
+
+                ctx.save();
+                // 阴影
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 5;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+
+                // 履带底色
+                ctx.fillStyle = '#222';
+                let trackW = 6;
+                if (this.dir === DIRS.UP || this.dir === DIRS.DOWN) {
+                    ctx.fillRect(this.x, this.y, trackW, this.h);
+                    ctx.fillRect(this.x + this.w - trackW, this.y, trackW, this.h);
+                } else {
+                    ctx.fillRect(this.x, this.y, this.w, trackW);
+                    ctx.fillRect(this.x, this.y + this.h - trackW, this.w, trackW);
                 }
 
+                // 去除阴影画主体
+                ctx.shadowColor = 'transparent';
+                
+                // 车体
                 ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.w, this.h);
+                if (this.dir === DIRS.UP || this.dir === DIRS.DOWN) {
+                    ctx.fillRect(this.x + trackW, this.y + 2, this.w - trackW*2, this.h - 4);
+                } else {
+                    ctx.fillRect(this.x + 2, this.y + trackW, this.w - 4, this.h - trackW*2);
+                }
 
+                // 车体高光
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                if (this.dir === DIRS.UP || this.dir === DIRS.DOWN) {
+                    ctx.fillRect(this.x + trackW, this.y + 2, this.w - trackW*2, 3);
+                } else {
+                    ctx.fillRect(this.x + 2, this.y + trackW, 3, this.h - trackW*2);
+                }
+
+                // 炮塔 (中心圆)
+                ctx.fillStyle = '#555';
+                ctx.beginPath();
+                ctx.arc(this.x + this.w/2, this.y + this.h/2, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 炮塔内圈
+                ctx.fillStyle = '#888';
+                ctx.beginPath();
+                ctx.arc(this.x + this.w/2, this.y + this.h/2, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 炮管
                 ctx.fillStyle = '#ccc';
-                const barrelLen = 12;
-                const barrelWidth = 6;
+                const barrelLen = 14;
+                const barrelWidth = 4;
                 let bx = this.x + this.w / 2 - barrelWidth / 2;
                 let by = this.y + this.h / 2 - barrelWidth / 2;
 
@@ -451,6 +540,8 @@
                 if (this.dir === DIRS.DOWN) ctx.fillRect(bx, by, barrelWidth, barrelLen);
                 if (this.dir === DIRS.LEFT) ctx.fillRect(bx - barrelLen, by, barrelLen, barrelWidth);
                 if (this.dir === DIRS.RIGHT) ctx.fillRect(bx, by, barrelLen, barrelWidth);
+
+                ctx.restore();
             }
 
             update() {
@@ -518,6 +609,11 @@
                 let bx = this.x + this.w / 2 - 3;
                 let by = this.y + this.h / 2 - 3;
                 bullets.push(new Bullet(bx, by, this.dir, this.isPlayer));
+                
+                // 开火后座力粒子
+                for(let i=0; i<3; i++) {
+                    particles.push(new Particle(bx+3, by+3, this.isPlayer ? '#00ffff' : '#ffaa00'));
+                }
             }
         }
 
@@ -532,9 +628,14 @@
                 this.isPlayer = isPlayer;
                 this.dead = false;
                 this.speed = isPlayer ? BULLET_SPEED : BULLET_SPEED * 0.5; 
+                this.trail = [];
             }
 
             update() {
+                // 记录尾迹
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > 5) this.trail.shift();
+
                 if (this.dir === DIRS.UP) this.y -= this.speed;
                 if (this.dir === DIRS.DOWN) this.y += this.speed;
                 if (this.dir === DIRS.LEFT) this.x -= this.speed;
@@ -546,14 +647,31 @@
             }
 
             draw() {
-                ctx.fillStyle = this.isPlayer ? '#00ffff' : '#ff4444';
+                const bColor = this.isPlayer ? '#00ffff' : '#ff3333';
+                
+                // 画尾迹
+                for(let i=0; i<this.trail.length; i++) {
+                    ctx.fillStyle = bColor;
+                    ctx.globalAlpha = i / this.trail.length * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(this.trail[i].x + 3, this.trail[i].y + 3, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1.0;
+
+                // 画弹头
+                ctx.fillStyle = '#fff';
                 ctx.beginPath();
-                ctx.arc(this.x + 3, this.y + 3, 3.5, 0, Math.PI * 2);
+                ctx.arc(this.x + 3, this.y + 3, 3, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = this.isPlayer ? 'rgba(0, 255, 255, 0.3)' : 'rgba(255, 68, 68, 0.3)';
+
+                // 光晕
+                ctx.fillStyle = bColor;
+                ctx.globalAlpha = 0.5;
                 ctx.beginPath();
-                ctx.arc(this.x + 3, this.y + 3, 6, 0, Math.PI * 2);
+                ctx.arc(this.x + 3, this.y + 3, 7, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.globalAlpha = 1.0;
             }
         }
 
@@ -573,11 +691,11 @@
             enemies = [];
             bullets = [];
             walls = [];
+            particles = [];
             gameOver = false;
             score = 0;
             scoreEl.textContent = '0';
 
-            // 应用玩家选择的皮肤
             player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, gameConfig.playerColor, true);
 
             const mapData = MAPS[Math.floor(Math.random() * MAPS.length)];
@@ -602,7 +720,6 @@
             ];
             for (let i = 0; i < gameConfig.enemyCount; i++) {
                 let spawn = maxSpawns[i % maxSpawns.length];
-                // 敌人强制使用红色 ENEMY_COLOR
                 enemies.push(new Tank(spawn.x, spawn.y, ENEMY_COLOR, false));
             }
 
@@ -617,10 +734,28 @@
 
         function endGame(isWin) {
             gameOver = true;
-            overlayTitle.textContent = isWin ? '胜 利 !' : '游戏结束';
-            overlayTitle.style.color = isWin ? '#4CAF50' : '#F44336';
+            overlayTitle.textContent = isWin ? '任务完成' : '基地被毁';
+            overlayTitle.style.color = isWin ? '#00ff88' : '#ff3333';
             overlayScore.textContent = `最终得分: ${score}`;
             gameOverScreen.classList.add('active');
+        }
+
+        // ---- 绘制背景网格 ----
+        function drawBackground() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * TILE_SIZE, 0);
+                ctx.lineTo(i * TILE_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= ROWS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * TILE_SIZE);
+                ctx.lineTo(canvas.width, i * TILE_SIZE);
+                ctx.stroke();
+            }
         }
 
         // ---- 渲染循环 ----
@@ -628,32 +763,74 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (gameOver) return;
 
-            ctx.fillStyle = '#FFD700'; 
-            ctx.fillRect(base.x, base.y, base.w, base.h);
-            ctx.fillStyle = '#000';
-            ctx.font = '20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('🦅', base.x + TILE_SIZE, base.y + 22);
+            drawBackground();
 
+            // 绘制基地
+            ctx.save();
+            ctx.shadowColor = '#ffaa00';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = '#FFD700'; 
+            ctx.beginPath();
+            // 画个盾牌形状
+            ctx.moveTo(base.x + TILE_SIZE, base.y);
+            ctx.lineTo(base.x + base.w, base.y + 10);
+            ctx.lineTo(base.x + base.w - 10, base.y + base.h - 5);
+            ctx.lineTo(base.x + TILE_SIZE, base.y + base.h);
+            ctx.lineTo(base.x + 10, base.y + base.h - 5);
+            ctx.lineTo(base.x, base.y + 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // 基地核心 (五角星)
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('★', base.x + TILE_SIZE, base.y + 22);
+
+            // 绘制墙壁
             for (let wall of walls) {
                 if (wall.type === 'brick') {
                     ctx.fillStyle = '#8B4513';
                     ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-                    ctx.strokeStyle = '#5c2e0a';
-                    ctx.strokeRect(wall.x + 2, wall.y + 2, wall.w - 4, wall.h - 4);
+                    // 砖块纹理
+                    ctx.strokeStyle = '#4a2000';
+                    ctx.lineWidth = 1;
+                    // 横线
+                    ctx.beginPath(); ctx.moveTo(wall.x, wall.y + wall.h/2); ctx.lineTo(wall.x + wall.w, wall.y + wall.h/2); ctx.stroke();
+                    // 竖线(交错)
+                    ctx.beginPath(); ctx.moveTo(wall.x + wall.w/2, wall.y); ctx.lineTo(wall.x + wall.w/2, wall.y + wall.h/2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(wall.x + wall.w/4, wall.y + wall.h/2); ctx.lineTo(wall.x + wall.w/4, wall.y + wall.h); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(wall.x + wall.w*0.75, wall.y + wall.h/2); ctx.lineTo(wall.x + wall.w*0.75, wall.y + wall.h); ctx.stroke();
                 } else {
-                    ctx.fillStyle = '#7a7a7a';
+                    // 钢墙
+                    ctx.fillStyle = '#666';
                     ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-                    ctx.strokeStyle = '#444';
+                    // 金属边框
+                    ctx.strokeStyle = '#999';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(wall.x + 2, wall.y + 2, wall.w - 4, wall.h - 4);
-                    ctx.lineWidth = 1;
+                    // 高光
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.beginPath();
+                    ctx.moveTo(wall.x + 4, wall.y + 4);
+                    ctx.lineTo(wall.x + wall.w - 4, wall.y + 4);
+                    ctx.lineTo(wall.x + 4, wall.y + wall.h - 4);
+                    ctx.fill();
                 }
             }
 
+            // 绘制坦克和子弹
             if (player.hp > 0) player.draw();
             for (let enemy of enemies) enemy.draw();
             for (let bullet of bullets) bullet.draw();
+
+            // 绘制粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
         }
 
         // ---- 逻辑更新循环 ----
@@ -667,35 +844,60 @@
                 let bullet = bullets[i];
                 bullet.update();
 
+                let hit = false;
+
+                // 打墙
                 for (let j = walls.length - 1; j >= 0; j--) {
                     let wall = walls[j];
                     if (rectIntersect(bullet, wall)) {
                         bullet.dead = true;
+                        hit = true;
+                        // 墙壁火花特效
+                        for(let k=0; k<5; k++) {
+                            particles.push(new Particle(bullet.x, bullet.y, wall.type === 'brick' ? '#ffaa00' : '#ffffff'));
+                        }
                         if (wall.type === 'brick') walls.splice(j, 1);
                         break;
                     }
                 }
 
+                // 打基地
                 if (rectIntersect(bullet, base)) {
                     bullet.dead = true;
+                    hit = true;
+                    // 基地爆炸特效
+                    for(let k=0; k<30; k++) {
+                        particles.push(new Particle(base.x + TILE_SIZE, base.y + TILE_SIZE/2, '#FFD700'));
+                    }
                     endGame(false);
                 }
 
+                // 打坦克
                 if (bullet.isPlayer) {
                     for (let enemy of enemies) {
                         if (enemy.hp > 0 && rectIntersect(bullet, enemy)) {
                             bullet.dead = true;
+                            hit = true;
                             enemy.hp = 0;
                             score += 100;
                             scoreEl.textContent = score;
                             updateEnemyUI();
+                            // 坦克爆炸特效
+                            for(let k=0; k<20; k++) {
+                                particles.push(new Particle(enemy.x + enemy.w/2, enemy.y + enemy.h/2, '#ff3333'));
+                            }
                             break;
                         }
                     }
                 } else {
                     if (player.hp > 0 && rectIntersect(bullet, player)) {
                         bullet.dead = true;
+                        hit = true;
                         player.hp = 0;
+                        // 玩家爆炸特效
+                        for(let k=0; k<30; k++) {
+                            particles.push(new Particle(player.x + player.w/2, player.y + player.h/2, gameConfig.playerColor));
+                        }
                         endGame(false);
                     }
                 }
@@ -735,11 +937,12 @@
                     swatch.classList.add('selected');
                 }
                 swatch.style.backgroundColor = skin.color;
+                swatch.style.color = skin.color; // 用于发光效果
                 swatch.title = skin.name;
                 
                 swatch.addEventListener('click', () => {
                     gameConfig.playerColor = skin.color;
-                    renderSkinSwatches(); // 重新渲染以更新选中状态
+                    renderSkinSwatches();
                 });
                 
                 colorSwatchesContainer.appendChild(swatch);
@@ -764,7 +967,7 @@
 
         goToSkinBtn.addEventListener('click', () => {
             mainMenuScreen.classList.remove('active');
-            renderSkinSwatches(); // 每次打开刷新当前选中状态
+            renderSkinSwatches(); 
             skinScreen.classList.add('active');
         });
 
