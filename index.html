@@ -3,32 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>坦克大战 - 极慢养生版</title>
+    <title>坦克大战 - 自定义版</title>
     <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-hover: #45a049;
+            --bg-color: #1a1a1a;
+            --panel-bg: #2a2a2a;
+            --text-color: #fff;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background-color: #1a1a1a;
+            background-color: var(--bg-color);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            color: #fff;
+            color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
         }
+
         .game-wrapper {
             position: relative;
+            width: 600px;
+            height: 600px;
         }
+
         canvas {
             background-color: #000;
             border: 4px solid #555;
-            box-shadow: 0 0 25px rgba(0,150,255,0.3);
+            box-shadow: 0 0 25px rgba(0, 150, 255, 0.3);
             display: block;
-            outline: none; /* 去除点击时的默认高亮边框 */
+            outline: none;
             cursor: crosshair;
+            box-sizing: border-box;
+            width: 100%;
+            height: 100%;
         }
+
         #ui {
             margin-top: 15px;
             font-size: 18px;
@@ -40,69 +56,158 @@
             border-radius: 8px;
             border: 1px solid #555;
         }
-        .highlight { color: #4CAF50; font-weight: bold; }
-        .key-hint { color: #ffaa00; font-weight: bold; }
-        
-        #restartBtn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-weight: bold;
-            outline: none;
-        }
-        #restartBtn:hover { background-color: #45a049; }
-        #restartBtn:active { background-color: #3d8b40; }
 
-        #gameOverlay {
+        .highlight { color: var(--primary); font-weight: bold; }
+        .key-hint { color: #ffaa00; font-weight: bold; }
+
+        /* 通用遮罩层样式 */
+        .overlay {
             position: absolute;
-            top: 4px; left: 4px; right: 4px; bottom: 4px; 
-            background-color: rgba(0, 0, 0, 0.85);
+            top: 4px; left: 4px; right: 4px; bottom: 4px;
+            background-color: rgba(0, 0, 0, 0.9);
             display: none; 
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 10;
+            border-radius: 2px;
         }
-        #gameOverlay h2 {
+
+        .overlay.active {
+            display: flex;
+        }
+
+        .overlay h2 {
             font-size: 50px;
-            margin: 0 0 10px 0;
+            margin: 0 0 20px 0;
             text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         }
-        #gameOverlay p {
-            font-size: 24px;
-            margin-bottom: 30px;
+
+        /* 开始菜单面板 */
+        .menu-panel {
+            background-color: var(--panel-bg);
+            padding: 30px 40px;
+            border-radius: 12px;
+            border: 1px solid #444;
+            width: 350px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        #overlayRestartBtn {
-            background-color: #2196F3;
+
+        .setting-item {
+            margin-bottom: 20px;
+        }
+
+        .setting-item label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 16px;
+            color: #ddd;
+        }
+
+        .setting-item .value-display {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            background: #444;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            margin-top: -6px;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* 按钮组 */
+        .btn {
+            background-color: var(--primary);
             color: white;
             border: none;
-            padding: 15px 40px;
-            font-size: 22px;
-            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: transform 0.1s, background 0.2s;
+            transition: background 0.2s, transform 0.1s;
             outline: none;
+            width: 100%;
+            margin-top: 10px;
         }
-        #overlayRestartBtn:hover { background-color: #1976D2; }
-        #overlayRestartBtn:active { transform: scale(0.95); }
+
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn:active { transform: scale(0.98); }
+        
+        .btn-secondary {
+            background-color: #555;
+            margin-top: 15px;
+        }
+        .btn-secondary:hover { background-color: #666; }
+
+        #uiRestartBtn {
+            width: auto;
+            margin-top: 0;
+            padding: 8px 16px;
+            font-size: 16px;
+        }
+
     </style>
 </head>
 <body>
 
     <div class="game-wrapper">
-        <!-- 加上 tabindex="0" 让 Canvas 可以接收键盘焦点 -->
+        <!-- 给 Canvas 加上 tabindex 保证键盘焦点 -->
         <canvas id="gameCanvas" width="600" height="600" tabindex="0"></canvas>
-        <div id="gameOverlay">
+        
+        <!-- 开始界面 -->
+        <div id="startScreen" class="overlay active">
+            <h2>坦克大战</h2>
+            <div class="menu-panel">
+                <div class="setting-item">
+                    <label>玩家移动速度 <span id="valPlayerSpeed" class="value-display">0.4</span></label>
+                    <input type="range" id="playerSpeed" min="0.1" max="2.0" step="0.1" value="0.4">
+                </div>
+                <div class="setting-item">
+                    <label>敌人移动速度 <span id="valEnemySpeed" class="value-display">0.15</span></label>
+                    <input type="range" id="enemySpeed" min="0.05" max="1.0" step="0.05" value="0.15">
+                </div>
+                <div class="setting-item">
+                    <label>敌人数量 <span id="valEnemyCount" class="value-display">4</span></label>
+                    <input type="range" id="enemyCount" min="1" max="8" step="1" value="4">
+                </div>
+                <div class="setting-item">
+                    <label>射击冷却 (帧) <span id="valShootCooldown" class="value-display">30</span></label>
+                    <input type="range" id="shootCooldown" min="10" max="60" step="5" value="30">
+                </div>
+                <button id="startBtn" class="btn">开始游戏</button>
+            </div>
+        </div>
+
+        <!-- 游戏结束界面 -->
+        <div id="gameOverScreen" class="overlay">
             <h2 id="overlayTitle">游戏结束</h2>
-            <p id="overlayScore">最终得分: 0</p>
-            <button id="overlayRestartBtn">重新开始</button>
+            <p id="overlayScore" style="font-size: 24px; margin-bottom: 20px;">最终得分: 0</p>
+            <button id="overlayRestartBtn" class="btn" style="width: 250px;">重新开始</button>
+            <button id="backToMenuBtn" class="btn btn-secondary" style="width: 250px;">返回设置</button>
         </div>
     </div>
 
@@ -110,46 +215,62 @@
         <span>移动: <span class="key-hint">WASD / 方向键</span></span>
         <span>开火: <span class="key-hint">鼠标左键 / J 键</span></span>
         <span id="scoreDisplay">得分: <span class="highlight">0</span></span>
-        <span id="enemyDisplay">剩余敌人: <span class="highlight">4</span></span>
-        <button id="restartBtn">重新开始</button>
+        <span id="enemyDisplay">剩余敌人: <span class="highlight">0</span></span>
+        <button id="uiRestartBtn" class="btn">重新开始</button>
     </div>
 
     <script>
+        // ---- DOM 元素获取 ----
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreEl = document.querySelector('#scoreDisplay .highlight');
         const enemyEl = document.querySelector('#enemyDisplay .highlight');
         
-        const topRestartBtn = document.getElementById('restartBtn');
-        const overlayRestartBtn = document.getElementById('overlayRestartBtn');
-        const gameOverlay = document.getElementById('gameOverlay');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayScore = document.getElementById('overlayScore');
 
-        // ---- 核心速度配置 (再次极度削弱) ----
+        const startBtn = document.getElementById('startBtn');
+        const overlayRestartBtn = document.getElementById('overlayRestartBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
+        const uiRestartBtn = document.getElementById('uiRestartBtn');
+
+        // 设置滑块 DOM
+        const sliders = {
+            playerSpeed: document.getElementById('playerSpeed'),
+            enemySpeed: document.getElementById('enemySpeed'),
+            enemyCount: document.getElementById('enemyCount'),
+            shootCooldown: document.getElementById('shootCooldown')
+        };
+
+        // ---- 核心配置与常量 ----
         const TILE_SIZE = 30;
         const COLS = 20;
         const ROWS = 20;
-        const TANK_SPEED = 0.4;     // 玩家移速再次减半
-        const BULLET_SPEED = 1.2;   // 玩家炮弹速度再次减半
-        const SHOOT_COOLDOWN = 30;  // 射击间隔延长至约 0.5秒
+        const BULLET_SPEED = 1.2; // 玩家炮弹速度固定
+
+        // 动态游戏配置（从滑块读取）
+        let gameConfig = {
+            playerSpeed: 0.4,
+            enemySpeed: 0.15,
+            enemyCount: 4,
+            shootCooldown: 30
+        };
 
         const DIRS = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
 
-        // 改用 code 监听，避免输入法拦截
+        // ---- 输入控制 ----
         const keys = {
             KeyW: false, KeyA: false, KeyS: false, KeyD: false,
             ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false,
             KeyJ: false
         };
-
-        // 鼠标开火状态
         let isMouseShooting = false;
 
         window.addEventListener('keydown', e => {
             if (keys.hasOwnProperty(e.code)) {
                 keys[e.code] = true;
-                // 仅拦截方向键的滚动行为，不拦截按键本身
                 if (e.code.startsWith('Arrow')) e.preventDefault(); 
             }
         });
@@ -160,11 +281,11 @@
             }
         });
 
-        // 鼠标点击画布开火
+        // 鼠标控制开火
         canvas.addEventListener('mousedown', e => {
             if (e.button === 0) { 
                 isMouseShooting = true;
-                canvas.focus(); // 点击时强制让画布获取焦点
+                canvas.focus(); 
             }
         });
         canvas.addEventListener('mouseup', e => {
@@ -174,10 +295,12 @@
             isMouseShooting = false;
         });
 
+        // ---- 碰撞检测 ----
         function rectIntersect(r1, r2) {
             return !(r2.x >= r1.x + r1.w || r2.x + r2.w <= r1.x || r2.y >= r1.y + r1.h || r2.y + r2.h <= r1.y);
         }
 
+        // ---- 地图数据 ----
         const MAPS = [
             [
                 "00000000000000000000", "00110000000000001100", "00110000000000001100", "00110000220000001100",
@@ -202,6 +325,7 @@
             ]
         ];
 
+        // ---- 坦克类 ----
         class Tank {
             constructor(x, y, color, isPlayer = false) {
                 this.x = x;
@@ -211,7 +335,10 @@
                 this.color = color;
                 this.dir = isPlayer ? DIRS.UP : DIRS.DOWN;
                 this.isPlayer = isPlayer;
-                this.speed = isPlayer ? TANK_SPEED : TANK_SPEED * 0.3; 
+                
+                // 从配置中读取速度
+                this.speed = isPlayer ? gameConfig.playerSpeed : gameConfig.enemySpeed;
+                
                 this.cooldown = 0;
                 this.aiTimer = 0;
                 this.hp = 1;
@@ -254,13 +381,11 @@
                 let moving = false;
 
                 if (this.isPlayer) {
-                    // 优先级：上 > 下 > 左 > 右
                     if (keys.KeyW || keys.ArrowUp) { this.dir = DIRS.UP; dy = -this.speed; moving = true; }
                     else if (keys.KeyS || keys.ArrowDown) { this.dir = DIRS.DOWN; dy = this.speed; moving = true; }
                     else if (keys.KeyA || keys.ArrowLeft) { this.dir = DIRS.LEFT; dx = -this.speed; moving = true; }
                     else if (keys.KeyD || keys.ArrowRight) { this.dir = DIRS.RIGHT; dx = this.speed; moving = true; }
 
-                    // 独立判断开火 (鼠标左键 或 J键)
                     if ((isMouseShooting || keys.KeyJ) && this.cooldown === 0) {
                         this.shoot();
                     }
@@ -309,13 +434,15 @@
             }
 
             shoot() {
-                this.cooldown = SHOOT_COOLDOWN; 
+                // 从配置读取冷却时间
+                this.cooldown = this.isPlayer ? gameConfig.shootCooldown : Math.max(gameConfig.shootCooldown, 40);
                 let bx = this.x + this.w / 2 - 3;
                 let by = this.y + this.h / 2 - 3;
                 bullets.push(new Bullet(bx, by, this.dir, this.isPlayer));
             }
         }
 
+        // ---- 子弹类 ----
         class Bullet {
             constructor(x, y, dir, isPlayer) {
                 this.x = x;
@@ -351,32 +478,32 @@
             }
         }
 
+        // ---- 游戏状态变量 ----
         let player;
         let enemies = [];
         let bullets = [];
         let walls = [];
         let base = { x: 9 * TILE_SIZE, y: 19 * TILE_SIZE, w: TILE_SIZE * 2, h: TILE_SIZE };
-        let gameOver = false;
-        let win = false;
+        let gameOver = true; // 初始不运行游戏
         let score = 0;
 
+        // ---- 初始化游戏 ----
         function initGame() {
-            gameOverlay.style.display = 'none';
-            // 清理按键状态
+            // 清理状态
             for (let k in keys) keys[k] = false;
             isMouseShooting = false;
-
-            player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, '#4CAF50', true);
             enemies = [];
             bullets = [];
             walls = [];
             gameOver = false;
-            win = false;
             score = 0;
             scoreEl.textContent = '0';
 
+            // 创建玩家
+            player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, '#4CAF50', true);
+
+            // 生成地图
             const mapData = MAPS[Math.floor(Math.random() * MAPS.length)];
-            
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
                     let tile = mapData[r][c];
@@ -388,19 +515,24 @@
                 }
             }
 
+            // 基地保护墙
             walls.push({ x: 8 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
             walls.push({ x: 11 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
 
-            const enemySpawns = [
-                {x: 0, y: 0}, {x: 9 * TILE_SIZE, y: 0}, 
-                {x: 18 * TILE_SIZE, y: 0}, {x: 18 * TILE_SIZE, y: 5 * TILE_SIZE}
+            // 生成敌人 (根据配置的数量)
+            const maxSpawns = [
+                {x: 0, y: 0}, {x: 9 * TILE_SIZE, y: 0}, {x: 18 * TILE_SIZE, y: 0}, 
+                {x: 0, y: 5 * TILE_SIZE}, {x: 18 * TILE_SIZE, y: 5 * TILE_SIZE},
+                {x: 9 * TILE_SIZE, y: 5 * TILE_SIZE}, {x: 0, y: 10 * TILE_SIZE}, {x: 18 * TILE_SIZE, y: 10 * TILE_SIZE}
             ];
-            for (let spawn of enemySpawns) {
+            for (let i = 0; i < gameConfig.enemyCount; i++) {
+                let spawn = maxSpawns[i % maxSpawns.length]; // 循环使用出生点
                 enemies.push(new Tank(spawn.x, spawn.y, '#F44336', false));
             }
+
             updateEnemyUI();
             
-            // 重新开始后让画布重新获取焦点
+            // 聚焦画布以接收键盘事件
             setTimeout(() => canvas.focus(), 50);
         }
 
@@ -411,19 +543,19 @@
 
         function endGame(isWin) {
             gameOver = true;
-            win = isWin;
             overlayTitle.textContent = isWin ? '胜 利 !' : '游戏结束';
             overlayTitle.style.color = isWin ? '#4CAF50' : '#F44336';
             overlayScore.textContent = `最终得分: ${score}`;
-            gameOverlay.style.display = 'flex';
+            gameOverScreen.classList.add('active');
         }
 
-        topRestartBtn.addEventListener('click', initGame);
-        overlayRestartBtn.addEventListener('click', initGame);
-
+        // ---- 渲染循环 ----
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            if (gameOver) return; // 如果游戏没开始或结束，不绘制内容
+
+            // 绘制基地
             ctx.fillStyle = '#FFD700'; 
             ctx.fillRect(base.x, base.y, base.w, base.h);
             ctx.fillStyle = '#000';
@@ -431,6 +563,7 @@
             ctx.textAlign = 'center';
             ctx.fillText('🦅', base.x + TILE_SIZE, base.y + 22);
 
+            // 绘制墙壁
             for (let wall of walls) {
                 if (wall.type === 'brick') {
                     ctx.fillStyle = '#8B4513';
@@ -447,11 +580,13 @@
                 }
             }
 
+            // 绘制坦克和子弹
             if (player.hp > 0) player.draw();
             for (let enemy of enemies) enemy.draw();
             for (let bullet of bullets) bullet.draw();
         }
 
+        // ---- 逻辑更新循环 ----
         function update() {
             if (gameOver) return;
 
@@ -462,6 +597,7 @@
                 let bullet = bullets[i];
                 bullet.update();
 
+                // 子弹打墙
                 for (let j = walls.length - 1; j >= 0; j--) {
                     let wall = walls[j];
                     if (rectIntersect(bullet, wall)) {
@@ -471,11 +607,13 @@
                     }
                 }
 
+                // 子弹打基地
                 if (rectIntersect(bullet, base)) {
                     bullet.dead = true;
                     endGame(false);
                 }
 
+                // 子弹打坦克
                 if (bullet.isPlayer) {
                     for (let enemy of enemies) {
                         if (enemy.hp > 0 && rectIntersect(bullet, enemy)) {
@@ -498,6 +636,7 @@
                 if (bullet.dead) bullets.splice(i, 1);
             }
 
+            // 检查胜利
             if (enemies.every(e => e.hp === 0)) {
                 endGame(true);
             }
@@ -509,7 +648,43 @@
             requestAnimationFrame(gameLoop);
         }
 
-        initGame();
+        // ---- UI 交互事件 ----
+        
+        // 1. 监听滑块的 input 事件，实时更新界面显示和配置
+        Object.keys(sliders).forEach(key => {
+            sliders[key].addEventListener('input', (e) => {
+                let val = parseFloat(e.target.value);
+                gameConfig[key] = val;
+                // 更新旁边的数值显示
+                document.getElementById(`val${key.charAt(0).toUpperCase() + key.slice(1)}`).textContent = val;
+            });
+        });
+
+        // 2. 开始按钮
+        startBtn.addEventListener('click', () => {
+            startScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            initGame();
+        });
+
+        // 3. 重新开始按钮 (右上角/结束界面)
+        uiRestartBtn.addEventListener('click', initGame);
+        overlayRestartBtn.addEventListener('click', () => {
+            gameOverScreen.classList.remove('active');
+            initGame();
+        });
+
+        // 4. 返回设置按钮
+        backToMenuBtn.addEventListener('click', () => {
+            gameOverScreen.classList.remove('active');
+            startScreen.classList.add('active');
+            // 刷新一下界面上的数值
+            Object.keys(sliders).forEach(key => {
+                document.getElementById(`val${key.charAt(0).toUpperCase() + key.slice(1)}`).textContent = gameConfig[key];
+            });
+        });
+
+        // 启动渲染循环
         gameLoop();
     </script>
 </body>
