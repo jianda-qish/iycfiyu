@@ -60,7 +60,7 @@
         .highlight { color: var(--primary); font-weight: bold; }
         .key-hint { color: #ffaa00; font-weight: bold; }
 
-        /* 通用遮罩层样式 */
+        /* 遮罩层基础样式 */
         .overlay {
             position: absolute;
             top: 4px; left: 4px; right: 4px; bottom: 4px;
@@ -83,7 +83,7 @@
             text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* 开始菜单面板 */
+        /* 菜单面板通用样式 */
         .menu-panel {
             background-color: var(--panel-bg);
             padding: 30px 40px;
@@ -91,10 +91,25 @@
             border: 1px solid #444;
             width: 350px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
         }
 
+        /* 主菜单按钮 */
+        .main-menu-btn {
+            display: block;
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 15px;
+            font-size: 20px;
+        }
+        .main-menu-btn:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 设置项 */
         .setting-item {
             margin-bottom: 20px;
+            text-align: left;
         }
 
         .setting-item label {
@@ -134,24 +149,47 @@
             transition: transform 0.1s;
         }
 
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
+        /* 皮肤选择器 */
+        .color-swatches {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
         }
 
-        /* 按钮组 */
+        .color-swatch {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+
+        .color-swatch.selected {
+            border-color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* 按钮通用样式 */
         .btn {
             background-color: var(--primary);
             color: white;
             border: none;
             padding: 12px 24px;
-            font-size: 18px;
+            font-size: 16px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
             transition: background 0.2s, transform 0.1s;
             outline: none;
             width: 100%;
-            margin-top: 10px;
         }
 
         .btn:hover { background-color: var(--primary-hover); }
@@ -167,7 +205,6 @@
             width: auto;
             margin-top: 0;
             padding: 8px 16px;
-            font-size: 16px;
         }
 
     </style>
@@ -175,12 +212,21 @@
 <body>
 
     <div class="game-wrapper">
-        <!-- 给 Canvas 加上 tabindex 保证键盘焦点 -->
         <canvas id="gameCanvas" width="600" height="600" tabindex="0"></canvas>
         
-        <!-- 开始界面 -->
-        <div id="startScreen" class="overlay active">
+        <!-- 1. 主菜单页面 -->
+        <div id="mainMenuScreen" class="overlay active">
             <h2>坦克大战</h2>
+            <div class="menu-panel">
+                <button id="goToStartBtn" class="btn main-menu-btn">开始游戏</button>
+                <button id="goToSettingsBtn" class="btn main-menu-btn btn-secondary">游戏设置</button>
+                <button id="goToSkinBtn" class="btn main-menu-btn btn-secondary">更换皮肤</button>
+            </div>
+        </div>
+
+        <!-- 2. 游戏设置面板 -->
+        <div id="settingsScreen" class="overlay">
+            <h2>游戏设置</h2>
             <div class="menu-panel">
                 <div class="setting-item">
                     <label>玩家移动速度 <span id="valPlayerSpeed" class="value-display">0.4</span></label>
@@ -198,16 +244,28 @@
                     <label>射击冷却 (帧) <span id="valShootCooldown" class="value-display">30</span></label>
                     <input type="range" id="shootCooldown" min="10" max="60" step="5" value="30">
                 </div>
-                <button id="startBtn" class="btn">开始游戏</button>
+                <button id="saveSettingsBtn" class="btn">保存并返回</button>
             </div>
         </div>
 
-        <!-- 游戏结束界面 -->
+        <!-- 3. 皮肤选择面板 -->
+        <div id="skinScreen" class="overlay">
+            <h2>选择皮肤</h2>
+            <div class="menu-panel">
+                <p style="color: #aaa; margin-top: 0; margin-bottom: 20px;">敌方坦克固定为红色，请选择其他颜色</p>
+                <div class="color-swatches" id="colorSwatchesContainer">
+                    <!-- JS 动态生成色块 -->
+                </div>
+                <button id="saveSkinBtn" class="btn">确认并返回</button>
+            </div>
+        </div>
+
+        <!-- 4. 游戏结束界面 -->
         <div id="gameOverScreen" class="overlay">
             <h2 id="overlayTitle">游戏结束</h2>
             <p id="overlayScore" style="font-size: 24px; margin-bottom: 20px;">最终得分: 0</p>
             <button id="overlayRestartBtn" class="btn" style="width: 250px;">重新开始</button>
-            <button id="backToMenuBtn" class="btn btn-secondary" style="width: 250px;">返回设置</button>
+            <button id="backToMenuBtn" class="btn btn-secondary" style="width: 250px;">返回主菜单</button>
         </div>
     </div>
 
@@ -226,12 +284,22 @@
         const scoreEl = document.querySelector('#scoreDisplay .highlight');
         const enemyEl = document.querySelector('#enemyDisplay .highlight');
         
-        const startScreen = document.getElementById('startScreen');
+        // 各个屏幕/面板
+        const mainMenuScreen = document.getElementById('mainMenuScreen');
+        const settingsScreen = document.getElementById('settingsScreen');
+        const skinScreen = document.getElementById('skinScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
+        
         const overlayTitle = document.getElementById('overlayTitle');
         const overlayScore = document.getElementById('overlayScore');
+        const colorSwatchesContainer = document.getElementById('colorSwatchesContainer');
 
-        const startBtn = document.getElementById('startBtn');
+        // 按钮
+        const goToStartBtn = document.getElementById('goToStartBtn');
+        const goToSettingsBtn = document.getElementById('goToSettingsBtn');
+        const goToSkinBtn = document.getElementById('goToSkinBtn');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        const saveSkinBtn = document.getElementById('saveSkinBtn');
         const overlayRestartBtn = document.getElementById('overlayRestartBtn');
         const backToMenuBtn = document.getElementById('backToMenuBtn');
         const uiRestartBtn = document.getElementById('uiRestartBtn');
@@ -248,14 +316,28 @@
         const TILE_SIZE = 30;
         const COLS = 20;
         const ROWS = 20;
-        const BULLET_SPEED = 1.2; // 玩家炮弹速度固定
+        const BULLET_SPEED = 1.2; 
+        
+        // 敌方固定颜色
+        const ENEMY_COLOR = '#F44336'; 
 
-        // 动态游戏配置（从滑块读取）
+        // 玩家的可用皮肤（排除了红色及相近颜色）
+        const PLAYER_SKINS = [
+            { name: '经典绿', color: '#4CAF50' },
+            { name: '天空蓝', color: '#2196F3' },
+            { name: '土豪金', color: '#FFC107' },
+            { name: '基佬紫', color: '#9C27B0' },
+            { name: '青春青', color: '#00BCD4' },
+            { name: '雪原白', color: '#E0E0E0' }
+        ];
+
+        // 动态游戏配置
         let gameConfig = {
             playerSpeed: 0.4,
             enemySpeed: 0.15,
             enemyCount: 4,
-            shootCooldown: 30
+            shootCooldown: 30,
+            playerColor: PLAYER_SKINS[0].color // 默认选第一个颜色
         };
 
         const DIRS = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
@@ -281,7 +363,6 @@
             }
         });
 
-        // 鼠标控制开火
         canvas.addEventListener('mousedown', e => {
             if (e.button === 0) { 
                 isMouseShooting = true;
@@ -336,7 +417,6 @@
                 this.dir = isPlayer ? DIRS.UP : DIRS.DOWN;
                 this.isPlayer = isPlayer;
                 
-                // 从配置中读取速度
                 this.speed = isPlayer ? gameConfig.playerSpeed : gameConfig.enemySpeed;
                 
                 this.cooldown = 0;
@@ -434,7 +514,6 @@
             }
 
             shoot() {
-                // 从配置读取冷却时间
                 this.cooldown = this.isPlayer ? gameConfig.shootCooldown : Math.max(gameConfig.shootCooldown, 40);
                 let bx = this.x + this.w / 2 - 3;
                 let by = this.y + this.h / 2 - 3;
@@ -484,12 +563,11 @@
         let bullets = [];
         let walls = [];
         let base = { x: 9 * TILE_SIZE, y: 19 * TILE_SIZE, w: TILE_SIZE * 2, h: TILE_SIZE };
-        let gameOver = true; // 初始不运行游戏
+        let gameOver = true; 
         let score = 0;
 
         // ---- 初始化游戏 ----
         function initGame() {
-            // 清理状态
             for (let k in keys) keys[k] = false;
             isMouseShooting = false;
             enemies = [];
@@ -499,10 +577,9 @@
             score = 0;
             scoreEl.textContent = '0';
 
-            // 创建玩家
-            player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, '#4CAF50', true);
+            // 应用玩家选择的皮肤
+            player = new Tank(9 * TILE_SIZE, 18 * TILE_SIZE, gameConfig.playerColor, true);
 
-            // 生成地图
             const mapData = MAPS[Math.floor(Math.random() * MAPS.length)];
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
@@ -515,24 +592,21 @@
                 }
             }
 
-            // 基地保护墙
             walls.push({ x: 8 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
             walls.push({ x: 11 * TILE_SIZE, y: 18 * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE, type: 'brick' });
 
-            // 生成敌人 (根据配置的数量)
             const maxSpawns = [
                 {x: 0, y: 0}, {x: 9 * TILE_SIZE, y: 0}, {x: 18 * TILE_SIZE, y: 0}, 
                 {x: 0, y: 5 * TILE_SIZE}, {x: 18 * TILE_SIZE, y: 5 * TILE_SIZE},
                 {x: 9 * TILE_SIZE, y: 5 * TILE_SIZE}, {x: 0, y: 10 * TILE_SIZE}, {x: 18 * TILE_SIZE, y: 10 * TILE_SIZE}
             ];
             for (let i = 0; i < gameConfig.enemyCount; i++) {
-                let spawn = maxSpawns[i % maxSpawns.length]; // 循环使用出生点
-                enemies.push(new Tank(spawn.x, spawn.y, '#F44336', false));
+                let spawn = maxSpawns[i % maxSpawns.length];
+                // 敌人强制使用红色 ENEMY_COLOR
+                enemies.push(new Tank(spawn.x, spawn.y, ENEMY_COLOR, false));
             }
 
             updateEnemyUI();
-            
-            // 聚焦画布以接收键盘事件
             setTimeout(() => canvas.focus(), 50);
         }
 
@@ -552,10 +626,8 @@
         // ---- 渲染循环 ----
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (gameOver) return;
 
-            if (gameOver) return; // 如果游戏没开始或结束，不绘制内容
-
-            // 绘制基地
             ctx.fillStyle = '#FFD700'; 
             ctx.fillRect(base.x, base.y, base.w, base.h);
             ctx.fillStyle = '#000';
@@ -563,7 +635,6 @@
             ctx.textAlign = 'center';
             ctx.fillText('🦅', base.x + TILE_SIZE, base.y + 22);
 
-            // 绘制墙壁
             for (let wall of walls) {
                 if (wall.type === 'brick') {
                     ctx.fillStyle = '#8B4513';
@@ -580,7 +651,6 @@
                 }
             }
 
-            // 绘制坦克和子弹
             if (player.hp > 0) player.draw();
             for (let enemy of enemies) enemy.draw();
             for (let bullet of bullets) bullet.draw();
@@ -597,7 +667,6 @@
                 let bullet = bullets[i];
                 bullet.update();
 
-                // 子弹打墙
                 for (let j = walls.length - 1; j >= 0; j--) {
                     let wall = walls[j];
                     if (rectIntersect(bullet, wall)) {
@@ -607,13 +676,11 @@
                     }
                 }
 
-                // 子弹打基地
                 if (rectIntersect(bullet, base)) {
                     bullet.dead = true;
                     endGame(false);
                 }
 
-                // 子弹打坦克
                 if (bullet.isPlayer) {
                     for (let enemy of enemies) {
                         if (enemy.hp > 0 && rectIntersect(bullet, enemy)) {
@@ -636,7 +703,6 @@
                 if (bullet.dead) bullets.splice(i, 1);
             }
 
-            // 检查胜利
             if (enemies.every(e => e.hp === 0)) {
                 endGame(true);
             }
@@ -650,41 +716,76 @@
 
         // ---- UI 交互事件 ----
         
-        // 1. 监听滑块的 input 事件，实时更新界面显示和配置
+        // 1. 绑定设置滑块
         Object.keys(sliders).forEach(key => {
             sliders[key].addEventListener('input', (e) => {
                 let val = parseFloat(e.target.value);
                 gameConfig[key] = val;
-                // 更新旁边的数值显示
                 document.getElementById(`val${key.charAt(0).toUpperCase() + key.slice(1)}`).textContent = val;
             });
         });
 
-        // 2. 开始按钮
-        startBtn.addEventListener('click', () => {
-            startScreen.classList.remove('active');
-            gameOverScreen.classList.remove('active');
+        // 2. 动态生成皮肤色块
+        function renderSkinSwatches() {
+            colorSwatchesContainer.innerHTML = '';
+            PLAYER_SKINS.forEach(skin => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                if (gameConfig.playerColor === skin.color) {
+                    swatch.classList.add('selected');
+                }
+                swatch.style.backgroundColor = skin.color;
+                swatch.title = skin.name;
+                
+                swatch.addEventListener('click', () => {
+                    gameConfig.playerColor = skin.color;
+                    renderSkinSwatches(); // 重新渲染以更新选中状态
+                });
+                
+                colorSwatchesContainer.appendChild(swatch);
+            });
+        }
+
+        // 3. 界面导航逻辑
+        goToStartBtn.addEventListener('click', () => {
+            mainMenuScreen.classList.remove('active');
             initGame();
         });
 
-        // 3. 重新开始按钮 (右上角/结束界面)
+        goToSettingsBtn.addEventListener('click', () => {
+            mainMenuScreen.classList.remove('active');
+            settingsScreen.classList.add('active');
+        });
+
+        saveSettingsBtn.addEventListener('click', () => {
+            settingsScreen.classList.remove('active');
+            mainMenuScreen.classList.add('active');
+        });
+
+        goToSkinBtn.addEventListener('click', () => {
+            mainMenuScreen.classList.remove('active');
+            renderSkinSwatches(); // 每次打开刷新当前选中状态
+            skinScreen.classList.add('active');
+        });
+
+        saveSkinBtn.addEventListener('click', () => {
+            skinScreen.classList.remove('active');
+            mainMenuScreen.classList.add('active');
+        });
+
         uiRestartBtn.addEventListener('click', initGame);
         overlayRestartBtn.addEventListener('click', () => {
             gameOverScreen.classList.remove('active');
             initGame();
         });
 
-        // 4. 返回设置按钮
         backToMenuBtn.addEventListener('click', () => {
             gameOverScreen.classList.remove('active');
-            startScreen.classList.add('active');
-            // 刷新一下界面上的数值
-            Object.keys(sliders).forEach(key => {
-                document.getElementById(`val${key.charAt(0).toUpperCase() + key.slice(1)}`).textContent = gameConfig[key];
-            });
+            mainMenuScreen.classList.add('active');
         });
 
-        // 启动渲染循环
+        // 初始化渲染色块，并启动游戏循环
+        renderSkinSwatches();
         gameLoop();
     </script>
 </body>
